@@ -6,7 +6,8 @@ Authors@R: c(person("Pedro", "Baldoni", email = "pedrobaldoni@gmail.com", role =
 Description: epigrahmm provides a set of tools for the analysis of epigenomic data based on hidden Markov Models.
 License: MIT + file LICENSE
 Imports: 
-    Rcpp
+    Rcpp,
+    magrittr
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.1.1
 Encoding: UTF-8
