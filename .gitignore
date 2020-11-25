@@ -1,0 +1,14 @@
+# Ignores from baldoni:
+
+.Rbuildignore
+*.Rproj
+
+# Default ignores
+
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+src/*.o
+src/*.so
+src/*.dll
