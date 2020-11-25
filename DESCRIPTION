@@ -1,0 +1,14 @@
+Package: epigraHMM
+Title: Epigenomic R-based analysis with hidden Markov models
+Version: 1.0.0
+Date: 2019-12-10
+Authors@R: c(person("Pedro", "Baldoni", email = "pedrobaldoni@gmail.com", role = c("aut","cre")))
+Description: epigrahmm provides a set of tools for the analysis of epigenomic data based on hidden Markov Models.
+License: MIT + file LICENSE
+Imports: 
+    Rcpp
+LinkingTo: Rcpp, RcppArmadillo
+RoxygenNote: 7.1.1
+Encoding: UTF-8
+Suggests: 
+    testthat
