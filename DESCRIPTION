@@ -8,7 +8,16 @@ License: MIT + file LICENSE
 Imports: 
     Rcpp,
     magrittr,
-    data.table
+    data.table,
+    SummarizedExperiment,
+    methods,
+    GenomeInfoDb,
+    GenomicRanges,
+    rtracklayer,
+    IRanges,
+    Rsamtools,
+    bamsignals,
+    csaw
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.1.1
 Encoding: UTF-8
