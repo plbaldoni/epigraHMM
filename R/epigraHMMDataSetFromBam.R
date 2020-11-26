@@ -55,10 +55,27 @@
 #' @importFrom GenomeInfoDb Seqinfo seqnames genome
 #' @importFrom GenomicRanges tile tileGenome makeGRangesFromDataFrame GRanges
 #' @importFrom rtracklayer browserSession getTable ucscTableQuery import BEDFile
-#' @importFrom IRanges overlapsAny
+#' @importFrom IRanges overlapsAny union
 #' @importFrom Rsamtools scanBam ScanBamParam
 #' @importFrom bamsignals bamCount
 #' @importFrom csaw maximizeCcf correlateReads readParam
+#' @importFrom data.table as.data.table
+#' @importFrom S4Vectors decode
+#' 
+#' @examples
+#' \dontrun{
+#' Rsamtools::indexBam(MMDiffBamSubset::WT.AB2())
+#' Rsamtools::indexBam(MMDiffBamSubset::Input())
+#' 
+#' bamFiles <- list('counts' = MMDiffBamSubset::WT.AB2(),
+#'                 'controls' = MMDiffBamSubset::Input())
+#'                 
+#' colData <- data.frame(condition = 'WT',replicate = 1)
+#'                 
+#' epigraHMMDataSetFromBam(bamFiles,colData,genome = 'mm10',windowSize = 250,
+#'                         gapTrack = TRUE,
+#'                         blackList = TRUE)
+#' }
 #'
 #' @export
 epigraHMMDataSetFromBam <- function(bamFiles,
@@ -108,11 +125,11 @@ epigraHMMDataSetFromBam <- function(bamFiles,
     } else{
         if(is.character(genome)){
             chrlist <- Reduce(intersect,lapply(bamFiles[['counts']],FUN = function(x){unique(as.character(Rsamtools::scanBam(x,param = Rsamtools::ScanBamParam(what = "rname"))[[1]]$rname))}))
-            
+
             # Tiling up the specified genome
             gr.seqinfo <- GenomeInfoDb::Seqinfo(genome=genome)
             gr.genome <- GenomicRanges::tileGenome(seqlengths = gr.seqinfo,tilewidth = windowSize,cut.last.tile.in.chrom = TRUE)
-            gr.genome <- gr.genome[GenomeInfoDb::seqnames(gr.genome)%in%chrlist]
+            gr.genome <- gr.genome[S4Vectors::decode(GenomeInfoDb::seqnames(gr.genome))%in%chrlist]
         } else{
             stop('The argument genome must be either a single string with the name of the reference genome (e.g. "hg19") or a "GRanges" object')
         }
@@ -124,7 +141,7 @@ epigraHMMDataSetFromBam <- function(bamFiles,
         session <- rtracklayer::browserSession()
         GenomeInfoDb::genome(session) <- genome
         gr.gaps <- GenomicRanges::makeGRangesFromDataFrame(
-            df = as.data.table(rtracklayer::getTable(rtracklayer::ucscTableQuery(session,table="gap")))[chrom%in%unique(seqnames(gr.seqinfo)),],
+            df = data.table::as.data.table(rtracklayer::getTable(rtracklayer::ucscTableQuery(session,table="gap")))[chrom%in%unique(seqnames(gr.seqinfo)),],
             seqinfo = gr.seqinfo,
             starts.in.df.are.0based = TRUE)
     } else{
@@ -137,7 +154,7 @@ epigraHMMDataSetFromBam <- function(bamFiles,
     
     # Setting up blacklist track
     if(blackList == TRUE & is.character(genome)){
-        gr.blackList <- GenomicRanges::trim(GenomicRanges::makeGRangesFromDataFrame(df = as.data.table(rtracklayer::import(rtracklayer::BEDFile(paste0('https://github.com/Boyle-Lab/Blacklist/raw/master/lists/',genome,'-blacklist.v2.bed.gz')))),
+        gr.blackList <- GenomicRanges::trim(GenomicRanges::makeGRangesFromDataFrame(df = data.table::as.data.table(rtracklayer::import(rtracklayer::BEDFile(paste0('https://github.com/Boyle-Lab/Blacklist/raw/master/lists/',genome,'-blacklist.v2.bed.gz')))),
                                                                                     seqinfo = GenomeInfoDb::Seqinfo(genome=genome)))
     } else{
         if(methods::is(blackList)[1]=="GRanges"){
@@ -148,15 +165,15 @@ epigraHMMDataSetFromBam <- function(bamFiles,
     }
     
     # Cleaning up the genome
-    gr.genome <- gr.genome[!IRanges::overlapsAny(gr.genome,union(gr.gaps,gr.blackList))]
+    gr.genome <- gr.genome[!IRanges::overlapsAny(gr.genome,IRanges::union(gr.gaps,gr.blackList))]
     
     # Estimating the fragment length
-    colData$fragLength <- lapply(seq_len(nrow(colData)),function(x){
-        csaw::maximizeCcf(csaw::correlateReads(bam.files = bamFiles[['counts']][x],param=csaw::readParam(discard=union(gr.gaps,gr.blackList))))
-    })
+    colData$fragLength <- unlist(lapply(seq_len(nrow(colData)),function(x){
+        csaw::maximizeCcf(csaw::correlateReads(bam.files = bamFiles[['counts']][x],param=csaw::readParam(discard=IRanges::union(gr.gaps,gr.blackList))))
+    }))
     
     # Computing read counts and adding to the output
-    epigraHMMDataSet <- SummarizedExperiment::SummarizedExperiment(assays = list(counts = matrix(do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){return(bamsignals::bamCount(bampath = bamFiles[['counts']][x],gr = gr.genome,verbose = FALSE,shift = colData$fragLength[x]/2))})),
+    epigraHMMDataSet <- SummarizedExperiment::SummarizedExperiment(assays = list(counts = matrix(do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){return(bamsignals::bamCount(bampath = bamFiles[['counts']][x],gr = gr.genome,verbose = FALSE,shift = colData[['fragLength']][x]/2))})),
                                                                                                  byrow = FALSE,nrow = length(gr.genome),ncol = nrow(colData),dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))),
                                                                    rowRanges = gr.genome,
                                                                    colData = colData)

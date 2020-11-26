@@ -62,6 +62,22 @@ The function will fetch the manually curated blacklist tracks (Version 2) from \
 Current available genomes are ce10, dm3, hg19, hg38, and mm10.
 If \code{blackList} is a GRanges object, the function will discard any genomic coordinate overlaping regions from \code{blackList}.
 }
+\examples{
+\dontrun{
+Rsamtools::indexBam(MMDiffBamSubset::WT.AB2())
+Rsamtools::indexBam(MMDiffBamSubset::Input())
+
+bamFiles <- list('counts' = MMDiffBamSubset::WT.AB2(),
+                'controls' = MMDiffBamSubset::Input())
+                
+colData <- data.frame(condition = 'WT',replicate = 1)
+                
+epigraHMMDataSetFromBam(bamFiles,colData,genome = 'mm10',windowSize = 250,
+                        gapTrack = TRUE,
+                        blackList = TRUE)
+}
+
+}
 \references{
 \url{https://github.com/plbaldoni/epigraHMM}
 DOI: 10.1093/nar/gkv1191
