@@ -18,7 +18,9 @@ Imports:
     Rsamtools,
     bamsignals,
     csaw,
-    S4Vectors
+    S4Vectors,
+    limma,
+    mgcv
 LinkingTo: Rcpp, RcppArmadillo
 RoxygenNote: 7.1.1
 Encoding: UTF-8
