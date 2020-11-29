@@ -4,14 +4,12 @@
 \alias{normalizeCounts}
 \title{Normalize counts}
 \usage{
-normalizeCounts(object, type = "loess", ...)
+normalizeCounts(object, ...)
 }
 \arguments{
 \item{object}{an epigraHMMDataSet}
 
-\item{type}{either 'loess', the default, or 'gam'}
-
-\item{...}{arguments to be passed to \code{\link[mgcv]{gam}} or \code{\link[limma]{loessFit}} for loess calculation}
+\item{...}{arguments to be passed to \code{\link[limma]{loessFit}} for loess calculation}
 }
 \value{
 An epigraHMMDataSet with an 'offsets' assay filled in.
@@ -20,8 +18,7 @@ An epigraHMMDataSet with an 'offsets' assay filled in.
 This function performs a non-linear normalization of counts with respect to a reference sample (geometric mean)
 }
 \details{
-If `type = 'gam'`, `normalizeCounts` will use `mgcv::bam` with option `discrete = TRUE`.
-If `type = 'loess'`, it will use `limma::loessFit`, which simply a wrapper for the `stats::lowess` smoother.
+This function `limma::loessFit`, which simply a wrapper for the `stats::lowess` smoother.
 }
 \references{
 \url{https://github.com/plbaldoni/epigraHMM}

@@ -3,13 +3,11 @@
 #' This function performs a non-linear normalization of counts with respect to a reference sample (geometric mean)
 #'
 #' @param object an epigraHMMDataSet
-#' @param type either 'loess', the default, or 'gam'
-#' @param ... arguments to be passed to \code{\link[mgcv]{gam}} or \code{\link[limma]{loessFit}} for loess calculation
+#' @param ... arguments to be passed to \code{\link[limma]{loessFit}} for loess calculation
 #'
 #' @details
 #'
-#' If `type = 'gam'`, `normalizeCounts` will use `mgcv::bam` with option `discrete = TRUE`.
-#' If `type = 'loess'`, it will use `limma::loessFit`, which simply a wrapper for the `stats::lowess` smoother.
+#' This function `limma::loessFit`, which simply a wrapper for the `stats::lowess` smoother.
 #'
 #' @return An epigraHMMDataSet with an 'offsets' assay filled in.
 #'
@@ -21,15 +19,14 @@
 #' @importFrom methods is
 #' @importFrom SummarizedExperiment assayNames assay
 #' @importFrom limma loessFit
-#' @importFrom mgcv bam s
 #'
 #' @export
-normalizeCounts <- function(object,type = 'loess',...){
+normalizeCounts <- function(object,...){
 
     #@importFrom mgcv bam s predict.bam
 
     # Checking input
-    if (!(methods::is(object)[1]=='RangedSummarizedExperiment') & (type %in% c('gam','loess'))){
+    if (!(methods::is(object)[1]=='RangedSummarizedExperiment')){
         stop('Check argments')
     }
 
@@ -43,12 +40,7 @@ normalizeCounts <- function(object,type = 'loess',...){
 
     # Creating offsets
     offsets <- do.call(cbind,lapply(seq_len(ncol(SummarizedExperiment::assay(object,'counts'))),function(x){
-        if (type == 'loess') {
-            return(limma::loessFit(y=(logSample[,x] - logReference),x=(logSample[,x] + logReference)/2,...)$fitted)
-        } else{
-            return(mgcv::bam(y~s(x,bs = 'cs'),discrete = TRUE,data = data.frame(y = (logSample[,x] - logReference),
-                                                                                x = (logSample[,x] + logReference)/2))$fitted.values)
-        }
+        return(limma::loessFit(y=(logSample[,x] - logReference),x=(logSample[,x] + logReference)/2,...)$fitted)
     }))
 
     # Organizing output
