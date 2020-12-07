@@ -2,6 +2,7 @@
 
 .Rbuildignore
 *.Rproj
+.DS_Store
 
 # Default ignores
 
