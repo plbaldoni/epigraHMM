@@ -23,8 +23,6 @@
 #' @export
 normalizeCounts <- function(object,...){
 
-    #@importFrom mgcv bam s predict.bam
-
     # Checking input
     if (!(methods::is(object)[1]=='RangedSummarizedExperiment')){
         stop('Check argments')
