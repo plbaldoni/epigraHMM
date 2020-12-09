@@ -6,6 +6,21 @@
 
 using namespace Rcpp;
 
+// logForwardBackward
+void logForwardBackward(arma::mat counts, arma::vec pi, arma::mat gamma, arma::mat logf, Rcpp::StringVector nameF, Rcpp::StringVector nameB);
+RcppExport SEXP _epigraHMM_logForwardBackward(SEXP countsSEXP, SEXP piSEXP, SEXP gammaSEXP, SEXP logfSEXP, SEXP nameFSEXP, SEXP nameBSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type counts(countsSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type gamma(gammaSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type logf(logfSEXP);
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameF(nameFSEXP);
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameB(nameBSEXP);
+    logForwardBackward(counts, pi, gamma, logf, nameF, nameB);
+    return R_NilValue;
+END_RCPP
+}
 // simulateMarkovChain
 NumericVector simulateMarkovChain(NumericMatrix P, int n);
 RcppExport SEXP _epigraHMM_simulateMarkovChain(SEXP PSEXP, SEXP nSEXP) {
@@ -20,6 +35,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_epigraHMM_logForwardBackward", (DL_FUNC) &_epigraHMM_logForwardBackward, 6},
     {"_epigraHMM_simulateMarkovChain", (DL_FUNC) &_epigraHMM_simulateMarkovChain, 2},
     {NULL, NULL, 0}
 };
