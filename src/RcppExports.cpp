@@ -6,19 +6,69 @@
 
 using namespace Rcpp;
 
-// logForwardBackward
-void logForwardBackward(arma::mat counts, arma::vec pi, arma::mat gamma, arma::mat logf, Rcpp::StringVector nameF, Rcpp::StringVector nameB);
-RcppExport SEXP _epigraHMM_logForwardBackward(SEXP countsSEXP, SEXP piSEXP, SEXP gammaSEXP, SEXP logfSEXP, SEXP nameFSEXP, SEXP nameBSEXP) {
+// aggregate
+arma::mat aggregate(arma::vec x, arma::vec f);
+RcppExport SEXP _epigraHMM_aggregate(SEXP xSEXP, SEXP fSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type f(fSEXP);
+    rcpp_result_gen = Rcpp::wrap(aggregate(x, f));
+    return rcpp_result_gen;
+END_RCPP
+}
+// expStep
+void expStep(arma::mat counts, arma::vec pi, arma::mat gamma, arma::mat logf, Rcpp::StringVector nameForwardProb, Rcpp::StringVector nameBackwardProb, Rcpp::StringVector nameMarginalProb, Rcpp::StringVector nameJointProb);
+RcppExport SEXP _epigraHMM_expStep(SEXP countsSEXP, SEXP piSEXP, SEXP gammaSEXP, SEXP logfSEXP, SEXP nameForwardProbSEXP, SEXP nameBackwardProbSEXP, SEXP nameMarginalProbSEXP, SEXP nameJointProbSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::mat >::type counts(countsSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type pi(piSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type gamma(gammaSEXP);
     Rcpp::traits::input_parameter< arma::mat >::type logf(logfSEXP);
-    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameF(nameFSEXP);
-    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameB(nameBSEXP);
-    logForwardBackward(counts, pi, gamma, logf, nameF, nameB);
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameForwardProb(nameForwardProbSEXP);
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameBackwardProb(nameBackwardProbSEXP);
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameMarginalProb(nameMarginalProbSEXP);
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameJointProb(nameJointProbSEXP);
+    expStep(counts, pi, gamma, logf, nameForwardProb, nameBackwardProb, nameMarginalProb, nameJointProb);
     return R_NilValue;
+END_RCPP
+}
+// rbinomVectorized
+arma::vec rbinomVectorized(arma::vec prob);
+RcppExport SEXP _epigraHMM_rbinomVectorized(SEXP probSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type prob(probSEXP);
+    rcpp_result_gen = Rcpp::wrap(rbinomVectorized(prob));
+    return rcpp_result_gen;
+END_RCPP
+}
+// rejectionControlled
+arma::mat rejectionControlled(NumericVector x, arma::vec f, double p);
+RcppExport SEXP _epigraHMM_rejectionControlled(SEXP xSEXP, SEXP fSEXP, SEXP pSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type f(fSEXP);
+    Rcpp::traits::input_parameter< double >::type p(pSEXP);
+    rcpp_result_gen = Rcpp::wrap(rejectionControlled(x, f, p));
+    return rcpp_result_gen;
+END_RCPP
+}
+// reweight
+arma::vec reweight(arma::vec x, double p);
+RcppExport SEXP _epigraHMM_reweight(SEXP xSEXP, SEXP pSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< double >::type p(pSEXP);
+    rcpp_result_gen = Rcpp::wrap(reweight(x, p));
+    return rcpp_result_gen;
 END_RCPP
 }
 // simulateMarkovChain
@@ -35,7 +85,11 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_epigraHMM_logForwardBackward", (DL_FUNC) &_epigraHMM_logForwardBackward, 6},
+    {"_epigraHMM_aggregate", (DL_FUNC) &_epigraHMM_aggregate, 2},
+    {"_epigraHMM_expStep", (DL_FUNC) &_epigraHMM_expStep, 8},
+    {"_epigraHMM_rbinomVectorized", (DL_FUNC) &_epigraHMM_rbinomVectorized, 1},
+    {"_epigraHMM_rejectionControlled", (DL_FUNC) &_epigraHMM_rejectionControlled, 3},
+    {"_epigraHMM_reweight", (DL_FUNC) &_epigraHMM_reweight, 2},
     {"_epigraHMM_simulateMarkovChain", (DL_FUNC) &_epigraHMM_simulateMarkovChain, 2},
     {NULL, NULL, 0}
 };

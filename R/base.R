@@ -36,10 +36,11 @@ initializerHMM = function(object,control){
     
     # Creating subdirectories
     tempDir <- path.expand(control$tempDir)
-    paths <- list(logF = file.path(tempDir,'logF'),
-                  logB = file.path(tempDir,'logB'),
-                  logP = file.path(tempDir,'logP'))
-    lapply(unlist(paths),function(x){if(!dir.exists(x)){system2('mkdir',paste('-p',x))}})
+    paths <- list(logFP = file.path(tempDir,'logFP'),
+                  logBP = file.path(tempDir,'logBP'),
+                  logP1 = file.path(tempDir,'logP1'),
+                  logP2 = file.path(tempDir,'logP2'))
+    lapply(unlist(paths),function(x){if(!dir.exists(x)){dir.create(x,recursive = TRUE)}})
     
     # General parameters
     M <- nrow(object)
@@ -71,32 +72,23 @@ initializerHMM = function(object,control){
     # EM algorithm begins
     message(paste0(c(rep('#',80))));message(Sys.time());message("Starting the EM algorithm")
     
-    while(count.em<maxcount.em & it.em<maxit.em){
-        it.em = it.em + 1
-        
-        # Updating parameters
-        # pi.k = theta.k[paste0('pi',seq_len(K))]
-        # gamma.k = matrix(theta.k[paste0('gamma',as.character(transform(expand.grid(seq_len(K),seq_len(K)),idx=paste0(Var1,Var2))$idx))],nrow=K,ncol=K,byrow=FALSE);k=(K+1);for(i in seq_len(K)){for(j in seq_len(K)){assign(paste0('gamma',j,i,'.k'),theta.k[k]);k=k+1}}
-        # psi1.k = theta.k[paste0('HMM1.',c(namesControl,'Disp'))]
-        # psi2.k = theta.k[paste0('HMM2.',c(namesControl,'Disp'))]
+    while(count.em<maxcount.em & iterEM<maxit.em){
+        iterEM = iterEM + 1
         
         # E-step
-        # mu <- HMM.mean.consensus(X.mat=as.matrix(dt[,grepl('Dsg',names(dt)),with=FALSE]),offset.vec=dt[,offset],psi=as.matrix(rbind(psi1.k,psi2.k)[,seq_len(ncolControl)]),N=N,M=M)
-        # loglik <- HMM.LL(Y.vec=dt[,ChIP],mu=mu,disp=rbind(psi1.k,psi2.k)[,(ncolControl+1)],N=N,M=M,K=K,model='nb')
-        # 
-        # Forward-Backward probabilities
-        logForwardBackward(counts = assay(object,'counts'),
-                        pi = theta.old[['pi']],
-                        gamma = theta.old[['gamma']],
-                        logf = do.call(cbind,lapply(1:2,function(x){dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]),size = theta.old[['psi']][[x]][2],log = TRUE)})),
-                        nameF = file.path(paths[['logF']],paste0('logF.bin')),
-                        nameB = file.path(paths[['logB']],paste0('logB.bin')))
-        
-        # Posterior probabilities
-        dt[,paste0('PostProb',seq_len(2)):=as.data.table(check.prob(hmm2_P1(logF=logF,logB=logB)))]
-        dt[,paste0('JoinProb',c('11','12','21','22')):=as.data.table(check.prob(hmm2_P2(logF=logF,logB=logB,logf1=loglik[,1],logf2=loglik[,2],gamma=gamma.k)))]
+        expStep(counts = assay(object,'counts'),
+                pi = theta.old[['pi']],
+                gamma = theta.old[['gamma']],
+                logf = do.call(cbind,lapply(1:2,function(x){dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]),size = theta.old[['psi']][[x]][2],log = TRUE)})),
+                nameForwardProb = file.path(paths[['logFP']],paste0('logF.bin')),
+                nameBackwardProb = file.path(paths[['logBP']],paste0('logF.bin')),
+                nameMarginalProb = file.path(paths[['logP1']],paste0('logF.bin')),
+                nameJointProb = file.path(paths[['logP2']],paste0('logF.bin')))
         
         # M-step
+        
+        ## Stopped here
+        
         ## Initial and transition probabilities
         PostProb = HMM.prob.consensus(dt = dt)
         pi.k1 = PostProb$pi
@@ -104,7 +96,21 @@ initializerHMM = function(object,control){
         
         ## Model parameters
         ### Aggregating data
-        rejection = (pcut>0)*ifelse((0.9^it.em)>=pcut,(0.9^it.em),pcut)
+        rejection = (control[['probCut']]>0)*ifelse((0.9^iterEM)>=control[['probCut']],(0.9^iterEM),control[['probCut']])
+        
+        test <- dt
+        test[,PostProb1 := runif(.N)]
+        test1 <- agg(test[,Rejection1 := PostProb1][PostProb1<rejection,Rejection1 := rbinom(.N,1,prob=PostProb1/rejection)*rejection],data.unique = dtUnique,rows = '(Rejection1>0)',agg = 'Rejection1')
+        
+        test2 <- rejectionControlled(x = test$PostProb1, f = test$Group, p =rejection)
+        test2 <- data.table(RC = test2[,1],Group = test2[,2])
+        
+        test3 <- merge(test1,test2,by = 'Group',all.x = TRUE)
+        plot(log10(test3$weights),log10(test3$RC));abline(0,1)
+        
+        ### Need to write a function to read posterior probabilities from disk
+        
+        
         dt1 <- agg(dt[,Rejection1 := PostProb1][PostProb1<rejection,Rejection1 := rbinom(.N,1,prob=PostProb1/rejection)*rejection],data.unique = dt.unique,rows = '(Rejection1>0)',agg = 'Rejection1')
         dt2 <- agg(dt[,Rejection2 := PostProb2][PostProb2<rejection,Rejection2 := rbinom(.N,1,prob=PostProb2/rejection)*rejection],data.unique = dt.unique,rows = '(Rejection2>0)',agg = 'Rejection2')
         
