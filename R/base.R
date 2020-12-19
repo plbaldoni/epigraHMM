@@ -24,6 +24,56 @@ checkProbabilities = function(P){
 }
 
 ################################################################################
+### Log-likelihood function of a GLM NB distribution and its derivative
+################################################################################
+
+glmNB = function(par,y,x,offset,weights){
+    l = stats::dnbinom(y,mu=exp(x%*%par[seq_len(ncol(x))]+offset),size=1/par[length(par)],log=TRUE);l[is.infinite(l)] = log(1e-300)
+    return(-sum(weights*l))
+}
+
+derivNB = function(par,y,x,offset,weights){
+    mu.vec = exp(x%*%par[seq_len(ncol(x))]+offset)
+    return(-c(colSums(as.numeric(weights)*as.numeric((y-mu.vec)/(1+par[length(par)]*mu.vec))*x),
+              sum(as.numeric(weights)*(log(1+par[length(par)]*mu.vec)+par[length(par)]*(y-mu.vec)/(1+par[length(par)]*mu.vec)-digamma(y+1/par[length(par)])+digamma(1/par[length(par)]))/(par[length(par)]^2))))
+}
+
+################################################################################
+### Invert parameters for glm.nb and glm.zinb
+################################################################################
+
+invertDispersion = function(par,model){
+    if(model=='nb'){return(c(par[seq_len((length(par)-1))],1/par[length(par)]))}
+    if(model=='zinb'){
+        n = length(par)
+        return(c(par[seq_len(((n-1)/2))],1/par[(n-1)/2+1],par[seq(from = ((n-1)/2+2),to = n)]))}
+}
+
+################################################################################
+### Optimizer for glm.nb
+################################################################################
+
+optimNB <- function(par,y,x,offset,weights,control){
+    
+    x <- as.matrix(x)
+    
+    tryCatch({assign('model',optim(par=invertDispersion(par,model='nb'),
+                                    fn=glmNB,
+                                    gr=derivNB,
+                                    method='L-BFGS-B',
+                                    lower=c(rep(-Inf,ncol(x)),1/control$maxDisp),
+                                    y = y,
+                                    x = x,
+                                    offset = offset,
+                                    weights = weights))},
+             error=function(e){assign('model',list('par' = invertDispersion(par,model='nb'),'convergence' = 99),inherits = TRUE)})
+    
+    model$par <- invertDispersion(model$par,model='nb')
+    
+    return(model)
+}
+
+################################################################################
 ### Initial peak caller
 ################################################################################
 
@@ -44,13 +94,14 @@ initializerHMM = function(object,control){
     
     # General parameters
     M <- nrow(object)
+    K <- 2
     errorEM <- c('error' = 1)
     iterEM <- 0
     countEM <- 0
     parList <- list()
     theta.old <- sapply(c('pi','gamma','psi'),function(x) NULL)
     theta.new <- sapply(c('pi','gamma','psi'),function(x) NULL)
-    
+
     # Transforming data into data.table and calculating scores
     dt <- data.table::data.table(ChIP = as.numeric(assay(object)))[,Group := .GRP,by = 'ChIP']
     
@@ -72,7 +123,7 @@ initializerHMM = function(object,control){
     # EM algorithm begins
     message(paste0(c(rep('#',80))));message(Sys.time());message("Starting the EM algorithm")
     
-    while(count.em<maxcount.em & iterEM<maxit.em){
+    while(countEM<control[['maxCountEM']] & iterEM<control[['maxIterEM']]){
         iterEM = iterEM + 1
         
         # E-step
@@ -80,74 +131,52 @@ initializerHMM = function(object,control){
                 pi = theta.old[['pi']],
                 gamma = theta.old[['gamma']],
                 logf = do.call(cbind,lapply(1:2,function(x){dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]),size = theta.old[['psi']][[x]][2],log = TRUE)})),
-                nameForwardProb = file.path(paths[['logFP']],paste0('logF.bin')),
-                nameBackwardProb = file.path(paths[['logBP']],paste0('logF.bin')),
-                nameMarginalProb = file.path(paths[['logP1']],paste0('logF.bin')),
-                nameJointProb = file.path(paths[['logP2']],paste0('logF.bin')))
+                nameForwardProb = file.path(paths[['logFP']],paste0('logFP.bin')),
+                nameBackwardProb = file.path(paths[['logBP']],paste0('logBP.bin')),
+                nameMarginalProb = file.path(paths[['logP1']],paste0('logP1.bin')),
+                nameJointProb = file.path(paths[['logP2']],paste0('logP2.bin')))
         
         # M-step
-        
-        ## Stopped here
-        
         ## Initial and transition probabilities
-        PostProb = HMM.prob.consensus(dt = dt)
-        pi.k1 = PostProb$pi
-        gamma.k1 = PostProb$gamma
+        theta.new[c('pi','gamma')] <- maxStepProb(nameMarginalProb = file.path(paths[['logP1']],paste0('logP1.bin')),
+                                                  nameJointProb = file.path(paths[['logP2']],paste0('logP2.bin')))
         
         ## Model parameters
-        ### Aggregating data
-        rejection = (control[['probCut']]>0)*ifelse((0.9^iterEM)>=control[['probCut']],(0.9^iterEM),control[['probCut']])
-        
-        test <- dt
-        test[,PostProb1 := runif(.N)]
-        test1 <- agg(test[,Rejection1 := PostProb1][PostProb1<rejection,Rejection1 := rbinom(.N,1,prob=PostProb1/rejection)*rejection],data.unique = dtUnique,rows = '(Rejection1>0)',agg = 'Rejection1')
-        
-        test2 <- rejectionControlled(x = test$PostProb1, f = test$Group, p =rejection)
-        test2 <- data.table(RC = test2[,1],Group = test2[,2])
-        
-        test3 <- merge(test1,test2,by = 'Group',all.x = TRUE)
-        plot(log10(test3$weights),log10(test3$RC));abline(0,1)
-        
-        ### Need to write a function to read posterior probabilities from disk
-        
-        
-        dt1 <- agg(dt[,Rejection1 := PostProb1][PostProb1<rejection,Rejection1 := rbinom(.N,1,prob=PostProb1/rejection)*rejection],data.unique = dt.unique,rows = '(Rejection1>0)',agg = 'Rejection1')
-        dt2 <- agg(dt[,Rejection2 := PostProb2][PostProb2<rejection,Rejection2 := rbinom(.N,1,prob=PostProb2/rejection)*rejection],data.unique = dt.unique,rows = '(Rejection2>0)',agg = 'Rejection2')
+        ### Rejection-controlled posterior probabilities
+        probCut <-  (control[['probCut']]>0)*ifelse((0.9^iterEM)>=control[['probCut']],(0.9^iterEM),control[['probCut']])
+        rcWeights <- lapply(rejectionControlled(nameMarginalProb = file.path(paths[['logP1']],paste0('logP1.bin')),f = dt$Group,p = probCut)[,1],
+                            function(x){colnames(x) <- c('weights','Group');return(as.matrix(cbind(x,dtUnique[match(x[,2],Group),][,-c('Group')][,Intercept := 1])))})
         
         ### Calculating MLEs
-        tryCatch({assign('model1',optim(par=inv.par(psi1.k,model='nb'),fn=glm.nb,gr=deriv.nb,method='L-BFGS-B',lower=c(rep(-Inf,ncolControl),1/max.phi),
-                                        Y.vec=dt1[,ChIP],X.mat=as.matrix(dt1[,grepl('Dsg',names(dt1)),with=FALSE]),offset.vec=dt1[,offset],weights.vec=dt1[,weights]))},
-                 error=function(e){assign('model1',list('par' = inv.par(psi1.k,model='nb'),'convergence' = 99),inherits = TRUE)})
-        tryCatch({assign('model2',optim(par=inv.par(psi2.k,model='nb'),fn=glm.nb,gr=deriv.nb,method='L-BFGS-B',lower=c(rep(-Inf,ncolControl),1/max.phi),
-                                        Y.vec=dt2[,ChIP],X.mat=as.matrix(dt2[,grepl('Dsg',names(dt2)),with=FALSE]),offset.vec=dt2[,offset],weights.vec=dt2[,weights]))},
-                 error=function(e){assign('model2',list('par' = inv.par(psi2.k,model='nb'),'convergence' = 99),inherits = TRUE)})
-        
-        rm(dt1);rm(dt2)
-        
-        ### Saving parameters
-        psi1.k1 = inv.par(model1$par,model='nb')
-        psi2.k1 = inv.par(model2$par,model='nb')
-        psi.k1 = c(psi1.k1,psi2.k1)
+        optimMLE <- lapply(seq_len(length(rcWeights)),function(x){
+            optimNB(par = theta.old$psi[[x]],y = rcWeights[[x]][,'ChIP'],
+                    x = rcWeights[[x]][,'Intercept'],offset = 0,
+                    weights = rcWeights[[x]][,'weights'],control = control)
+        })
+        theta.new[['psi']] <- lapply(optimMLE,function(x){x[['par']]})
         
         # Updating parameter history
-        theta.k1 = c(pi.k1,gamma.k1,psi.k1)
-        names(theta.k1) = names(theta.k)
-        theta.k = theta.k1
-        parlist[[it.em]] = c(it=it.em,error=error.em,theta.k1,m1=model1$convergence,m2=model2$convergence)
+        errorEM['error'] <- sum(unlist(lapply(names(theta.old),function(x){sqrt(sum((unlist(theta.old[[x]])-unlist(theta.new[[x]]))^2))})))
+        
+        parList[[iterEM]] <- c(it=iterEM,errorEM,m=1*any(!unname(unlist(lapply(optimMLE,function(x){x[['convergence']]}))) == 0))
+        
+        theta.old <- theta.new
         
         # Computing EM error
-        gap = ifelse(it.em>minit.em,gap.em,1)
-        if(it.em>1){
-            parlist.old = parlist[[(it.em-gap)]][names(psi.k1)]
-            parlist.new = parlist[[it.em]][names(psi.k1)]
-        } else{
-            parlist.old = rep(1,length(names(psi.k1)))
-            parlist.new = rep(1,length(names(psi.k1)))
+        countEM <- as.numeric(errorEM<=control[['epsilonEM']][1])*(iterEM>control[['minIterEM']])*(countEM+1) + 0
+        
+        #Outputing history
+        if(!control[['quiet']]){
+            message(paste0(c(rep('#',80))))
+            message('\rIteration: ',iterEM,'. Error: ',paste(formatC(errorEM, format = "e", digits = 2)),sep='')
+            message("\r",paste('Initial prob. estimates: '),paste(formatC(theta.new[['pi']], format = "e", digits = 2),collapse = ' '))
+            message("\r",paste('Transition prob. estimates: '),paste(formatC(theta.new[['gamma']], format = "e", digits = 2),collapse = ' '))
+            message("\r",paste('Model paramater estimates: '),paste(formatC(unlist(theta.new[['psi']]), format = "e", digits = 2),collapse = ' '))
+            message(paste0(c(rep('#',80))))
         }
-        MRCPE = max(abs((parlist.new-parlist.old)/parlist.old)) #Max. Abs. Rel. Change. of par. estimates
-        error.em = ifelse(it.em>=2,MRCPE,1)
-        count.em = as.numeric(any(error.em<=epsilon.em))*(it.em>minit.em)*(count.em+1) + 0
     }
+    
+    getViterbiSequence(nameForwardProb = file.path(paths[['logFP']],paste0('logFP.bin')),pi = c(theta.new$pi),gamma = theta.new$gamma)
     
     # Organizing output
     z = hmm2_Viterbi(LOGF=loglik,P=pi.k1,GAMMA=gamma.k1)
