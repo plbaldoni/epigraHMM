@@ -1,0 +1,21 @@
+//[[Rcpp::depends(RcppArmadillo)]]
+#include <RcppArmadillo.h>
+#include <numeric>
+#include <Rcpp.h>
+#include <H5Cpp.h>
+using namespace Rcpp;
+using namespace arma;
+using namespace H5;
+
+// Get marginal probabilities saved in disk
+//[[Rcpp::export]]
+arma::mat getMarginalProbability(Rcpp::StringVector nameMarginalProb) { 
+    
+    arma::mat logProb1;
+    
+    std::vector<std::string> vstrings(1);
+    vstrings[0] = nameMarginalProb(0);
+    logProb1.load(vstrings[0]);
+    
+    return exp(logProb1);
+}
