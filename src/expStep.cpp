@@ -90,6 +90,10 @@ void expStep(arma::mat counts,
         }
     }
     
+    // Normalizing
+    logProb1 = log(normalise(exp(logProb1),1,1));
+    logProb2 = log(normalise(exp(logProb2),1,1));
+    
     // Saving the posterior probabilities
     vstringsP1[0] = nameMarginalProb(0);
     logProb1.save(vstringsP1[0]);
