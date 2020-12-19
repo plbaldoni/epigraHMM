@@ -9,12 +9,24 @@ expStep <- function(counts, pi, gamma, logf, nameForwardProb, nameBackwardProb, 
     invisible(.Call(`_epigraHMM_expStep`, counts, pi, gamma, logf, nameForwardProb, nameBackwardProb, nameMarginalProb, nameJointProb))
 }
 
+getMarginalProbability <- function(nameMarginalProb) {
+    .Call(`_epigraHMM_getMarginalProbability`, nameMarginalProb)
+}
+
+getViterbiSequence <- function(nameForwardProb, pi, gamma) {
+    .Call(`_epigraHMM_getViterbiSequence`, nameForwardProb, pi, gamma)
+}
+
+maxStepProb <- function(nameMarginalProb, nameJointProb) {
+    .Call(`_epigraHMM_maxStepProb`, nameMarginalProb, nameJointProb)
+}
+
 rbinomVectorized <- function(prob) {
     .Call(`_epigraHMM_rbinomVectorized`, prob)
 }
 
-rejectionControlled <- function(x, f, p) {
-    .Call(`_epigraHMM_rejectionControlled`, x, f, p)
+rejectionControlled <- function(nameMarginalProb, f, p) {
+    .Call(`_epigraHMM_rejectionControlled`, nameMarginalProb, f, p)
 }
 
 reweight <- function(x, p) {

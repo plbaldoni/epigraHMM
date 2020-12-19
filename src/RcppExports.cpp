@@ -35,6 +35,42 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// getMarginalProbability
+arma::mat getMarginalProbability(Rcpp::StringVector nameMarginalProb);
+RcppExport SEXP _epigraHMM_getMarginalProbability(SEXP nameMarginalProbSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameMarginalProb(nameMarginalProbSEXP);
+    rcpp_result_gen = Rcpp::wrap(getMarginalProbability(nameMarginalProb));
+    return rcpp_result_gen;
+END_RCPP
+}
+// getViterbiSequence
+arma::vec getViterbiSequence(Rcpp::StringVector nameForwardProb, arma::vec pi, arma::mat gamma);
+RcppExport SEXP _epigraHMM_getViterbiSequence(SEXP nameForwardProbSEXP, SEXP piSEXP, SEXP gammaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameForwardProb(nameForwardProbSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< arma::mat >::type gamma(gammaSEXP);
+    rcpp_result_gen = Rcpp::wrap(getViterbiSequence(nameForwardProb, pi, gamma));
+    return rcpp_result_gen;
+END_RCPP
+}
+// maxStepProb
+Rcpp::List maxStepProb(Rcpp::StringVector nameMarginalProb, Rcpp::StringVector nameJointProb);
+RcppExport SEXP _epigraHMM_maxStepProb(SEXP nameMarginalProbSEXP, SEXP nameJointProbSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameMarginalProb(nameMarginalProbSEXP);
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameJointProb(nameJointProbSEXP);
+    rcpp_result_gen = Rcpp::wrap(maxStepProb(nameMarginalProb, nameJointProb));
+    return rcpp_result_gen;
+END_RCPP
+}
 // rbinomVectorized
 arma::vec rbinomVectorized(arma::vec prob);
 RcppExport SEXP _epigraHMM_rbinomVectorized(SEXP probSEXP) {
@@ -47,15 +83,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // rejectionControlled
-arma::mat rejectionControlled(NumericVector x, arma::vec f, double p);
-RcppExport SEXP _epigraHMM_rejectionControlled(SEXP xSEXP, SEXP fSEXP, SEXP pSEXP) {
+arma::field<arma::mat> rejectionControlled(Rcpp::StringVector nameMarginalProb, arma::vec f, double p);
+RcppExport SEXP _epigraHMM_rejectionControlled(SEXP nameMarginalProbSEXP, SEXP fSEXP, SEXP pSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type nameMarginalProb(nameMarginalProbSEXP);
     Rcpp::traits::input_parameter< arma::vec >::type f(fSEXP);
     Rcpp::traits::input_parameter< double >::type p(pSEXP);
-    rcpp_result_gen = Rcpp::wrap(rejectionControlled(x, f, p));
+    rcpp_result_gen = Rcpp::wrap(rejectionControlled(nameMarginalProb, f, p));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -87,6 +123,9 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_epigraHMM_aggregate", (DL_FUNC) &_epigraHMM_aggregate, 2},
     {"_epigraHMM_expStep", (DL_FUNC) &_epigraHMM_expStep, 8},
+    {"_epigraHMM_getMarginalProbability", (DL_FUNC) &_epigraHMM_getMarginalProbability, 1},
+    {"_epigraHMM_getViterbiSequence", (DL_FUNC) &_epigraHMM_getViterbiSequence, 3},
+    {"_epigraHMM_maxStepProb", (DL_FUNC) &_epigraHMM_maxStepProb, 2},
     {"_epigraHMM_rbinomVectorized", (DL_FUNC) &_epigraHMM_rbinomVectorized, 1},
     {"_epigraHMM_rejectionControlled", (DL_FUNC) &_epigraHMM_rejectionControlled, 3},
     {"_epigraHMM_reweight", (DL_FUNC) &_epigraHMM_reweight, 2},
