@@ -57,15 +57,15 @@ optimNB <- function(par,y,x,offset,weights,control){
     
     x <- as.matrix(x)
     
-    tryCatch({assign('model',optim(par=invertDispersion(par,model='nb'),
-                                    fn=glmNB,
-                                    gr=derivNB,
-                                    method='L-BFGS-B',
-                                    lower=c(rep(-Inf,ncol(x)),1/control$maxDisp),
-                                    y = y,
-                                    x = x,
-                                    offset = offset,
-                                    weights = weights))},
+    tryCatch({assign('model',stats::optim(par=invertDispersion(par,model='nb'),
+                                          fn=glmNB,
+                                          gr=derivNB,
+                                          method='L-BFGS-B',
+                                          lower=c(rep(-Inf,ncol(x)),1/control$maxDisp),
+                                          y = y,
+                                          x = x,
+                                          offset = offset,
+                                          weights = weights))},
              error=function(e){assign('model',list('par' = invertDispersion(par,model='nb'),'convergence' = 99),inherits = TRUE)})
     
     model$par <- invertDispersion(model$par,model='nb')
@@ -79,29 +79,27 @@ optimNB <- function(par,y,x,offset,weights,control){
 
 initializerHMM = function(object,control){
     
+    Group = ChIP = mu = sigma2 = Intercept = NULL
+    
     # Checking input
     if(!ncol(object)==1){
         stop('The initializer supports only one sample at a time')
     }
     
     # Creating subdirectories
-    tempDir <- path.expand(control$tempDir)
-    paths <- list(logFP = file.path(tempDir,'logFP'),
-                  logBP = file.path(tempDir,'logBP'),
-                  logP1 = file.path(tempDir,'logP1'),
-                  logP2 = file.path(tempDir,'logP2'))
-    lapply(unlist(paths),function(x){if(!dir.exists(x)){dir.create(x,recursive = TRUE)}})
+    paths <- list(logFP = file.path(path.expand(control$tempDir),'logFP',paste0('logFP_',colnames(object),'.bin')),
+                  logBP = file.path(path.expand(control$tempDir),'logBP',paste0('logBP_',colnames(object),'.bin')),
+                  logP1 = file.path(path.expand(control$tempDir),'logP1',paste0('logP1_',colnames(object),'.bin')),
+                  logP2 = file.path(path.expand(control$tempDir),'logP2',paste0('logP2_',colnames(object),'.bin')))
+    invisible(lapply(paths,function(x){if(!dir.exists(dirname(x))){dir.create(dirname(x),recursive = TRUE)}}))
     
     # General parameters
     M <- nrow(object)
     K <- 2
-    errorEM <- c('error' = 1)
-    iterEM <- 0
-    countEM <- 0
-    parList <- list()
+    parList <- list('iteration' = 0,'error' = 0,'count' = 0,'convergence' = 0)
     theta.old <- sapply(c('pi','gamma','psi'),function(x) NULL)
     theta.new <- sapply(c('pi','gamma','psi'),function(x) NULL)
-
+    
     # Transforming data into data.table and calculating scores
     dt <- data.table::data.table(ChIP = as.numeric(assay(object)))[,Group := .GRP,by = 'ChIP']
     
@@ -111,40 +109,39 @@ initializerHMM = function(object,control){
     
     # Naive split
     score <- scale(log1p(dt$ChIP))
-    z <- as.numeric(cut(score,breaks=c(-Inf,quantile(score,0.75),Inf)))
+    z <- as.numeric(cut(score,breaks=c(-Inf,stats::quantile(score,0.75),Inf)))
     
     # Parameter initializations
-    theta.old[['pi']] <- c(0.999,1-0.999)
+    theta.old[['pi']] <- c(0.999,0.001)
     theta.old[['gamma']] <- estimateTransitionProb(chain = z,numStates = 2)
     theta.old[['psi']] <- lapply(1:2,function(x){
-        dt[which(z == x),.(mu = mean(log1p(ChIP)),sigma2 = var(log1p(ChIP)))][,c(mu,(mu^2)/(sigma2+mu))]
+        dt[which(z == x),list(mu = mean(log1p(ChIP)),sigma2 = stats::var(log1p(ChIP)))][,c(mu,(mu^2)/(sigma2+mu))]
     })
     
     # EM algorithm begins
     message(paste0(c(rep('#',80))));message(Sys.time());message("Starting the EM algorithm")
     
-    while(countEM<control[['maxCountEM']] & iterEM<control[['maxIterEM']]){
-        iterEM = iterEM + 1
+    while(parList[['count']]<control[['maxCountEM']] & parList[['iteration']]<control[['maxIterEM']]){
+        
+        # Update iteration
+        parList[['iteration']] = parList[['iteration']] + 1
         
         # E-step
         expStep(counts = assay(object,'counts'),
                 pi = theta.old[['pi']],
                 gamma = theta.old[['gamma']],
-                logf = do.call(cbind,lapply(1:2,function(x){dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]),size = theta.old[['psi']][[x]][2],log = TRUE)})),
-                nameForwardProb = file.path(paths[['logFP']],paste0('logFP.bin')),
-                nameBackwardProb = file.path(paths[['logBP']],paste0('logBP.bin')),
-                nameMarginalProb = file.path(paths[['logP1']],paste0('logP1.bin')),
-                nameJointProb = file.path(paths[['logP2']],paste0('logP2.bin')))
+                logf = do.call(cbind,lapply(1:2,function(x){stats::dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]),size = theta.old[['psi']][[x]][2],log = TRUE)})),
+                nameForwardProb = paths[['logFP']],nameBackwardProb = paths[['logBP']],
+                nameMarginalProb = paths[['logP1']],nameJointProb = paths[['logP2']])
         
         # M-step
         ## Initial and transition probabilities
-        theta.new[c('pi','gamma')] <- maxStepProb(nameMarginalProb = file.path(paths[['logP1']],paste0('logP1.bin')),
-                                                  nameJointProb = file.path(paths[['logP2']],paste0('logP2.bin')))
+        theta.new[c('pi','gamma')] <- maxStepProb(nameMarginalProb = paths[['logP1']],nameJointProb = paths[['logP2']])
         
         ## Model parameters
         ### Rejection-controlled posterior probabilities
-        probCut <-  (control[['probCut']]>0)*ifelse((0.9^iterEM)>=control[['probCut']],(0.9^iterEM),control[['probCut']])
-        rcWeights <- lapply(rejectionControlled(nameMarginalProb = file.path(paths[['logP1']],paste0('logP1.bin')),f = dt$Group,p = probCut)[,1],
+        probCut <-  (control[['probCut']]>0)*ifelse((0.9^parList[['iteration']])>=control[['probCut']],(0.9^parList[['iteration']]),control[['probCut']])
+        rcWeights <- lapply(rejectionControlled(nameMarginalProb = paths[['logP1']],f = dt$Group,p = probCut)[,1],
                             function(x){colnames(x) <- c('weights','Group');return(as.matrix(cbind(x,dtUnique[match(x[,2],Group),][,-c('Group')][,Intercept := 1])))})
         
         ### Calculating MLEs
@@ -155,20 +152,18 @@ initializerHMM = function(object,control){
         })
         theta.new[['psi']] <- lapply(optimMLE,function(x){x[['par']]})
         
+        # Updating parList
+        parList[['error']] <- max(abs((unlist(theta.new)-unlist(theta.old))/unlist(theta.old)))
+        parList[['count']] <- as.numeric(parList[['error']]<=control[['epsilonEM']][1])*(parList[['iteration']]>control[['minIterEM']])*(parList[['count']]+1) + 0
+        parList[['convergence']] <- 1*any(!unname(unlist(lapply(optimMLE,function(x){x[['convergence']]}))) == 0)
+        
         # Updating parameter history
-        errorEM['error'] <- sum(unlist(lapply(names(theta.old),function(x){sqrt(sum((unlist(theta.old[[x]])-unlist(theta.new[[x]]))^2))})))
-        
-        parList[[iterEM]] <- c(it=iterEM,errorEM,m=1*any(!unname(unlist(lapply(optimMLE,function(x){x[['convergence']]}))) == 0))
-        
         theta.old <- theta.new
-        
-        # Computing EM error
-        countEM <- as.numeric(errorEM<=control[['epsilonEM']][1])*(iterEM>control[['minIterEM']])*(countEM+1) + 0
         
         #Outputing history
         if(!control[['quiet']]){
             message(paste0(c(rep('#',80))))
-            message('\rIteration: ',iterEM,'. Error: ',paste(formatC(errorEM, format = "e", digits = 2)),sep='')
+            message('\rIteration: ',parList[['iteration']],'. Error: ',paste(formatC(parList[['error']], format = "e", digits = 2)),sep='')
             message("\r",paste('Initial prob. estimates: '),paste(formatC(theta.new[['pi']], format = "e", digits = 2),collapse = ' '))
             message("\r",paste('Transition prob. estimates: '),paste(formatC(theta.new[['gamma']], format = "e", digits = 2),collapse = ' '))
             message("\r",paste('Model paramater estimates: '),paste(formatC(unlist(theta.new[['psi']]), format = "e", digits = 2),collapse = ' '))
@@ -176,14 +171,7 @@ initializerHMM = function(object,control){
         }
     }
     
-    getViterbiSequence(nameForwardProb = file.path(paths[['logFP']],paste0('logFP.bin')),pi = c(theta.new$pi),gamma = theta.new$gamma)
+    message("EM algorithm converged!");message(Sys.time());message(paste0(c(rep('#',80))))
     
-    # Organizing output
-    z = hmm2_Viterbi(LOGF=loglik,P=pi.k1,GAMMA=gamma.k1)
-    logF <- setnames(as.data.table(logF),c('Background','Enrichment'))
-    logB <- setnames(as.data.table(logB),c('Background','Enrichment'))
-    loglik <- setnames(as.data.table(loglik),c('Background','Enrichment'))
-    mu <- as.data.table(mu)
-    return(list('Pi'=pi.k1,'Gamma'=gamma.k1,'Psi'=psi.k1,'Prob'=dt[,list(PostProb1,PostProb2)],
-                'LogF'=logF,'LogB'=logB,'Loglik'=loglik,'Parhist'=as.data.table(do.call(rbind,parlist)),'Mean'=mu,'Viterbi'=z))
+    return(list('viterbi' = getViterbiSequence(nameForwardProb = paths[['logFP']],pi = c(theta.new$pi),gamma = theta.new$gamma)))
 }
