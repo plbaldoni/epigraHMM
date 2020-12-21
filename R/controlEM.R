@@ -9,8 +9,8 @@
 #' @param maxCountEM a positive integer giving the number of consecutive EM iterations satisfying the convergence criterion in order to stop the algorithm. Default is 3.
 #' @param maxDisp a positive value for the upper limit constraint of the dispersion parameters. Default is 1000.
 #' @param criterion a character specifying the convergence criterion. Either "MRCPE" (maximum absolute relative change in parameter estimates), "MACPE" (maximum absolute change of parameter estimates),
-#' "ARCEL" (absolute relative change of the Q-function), "ACC" (agreement of Viterbi peak calls), or "MULTI" (simultaneously check for MRCPE, MACPE, ARCEL, and ACC).
-#' For ACC, it computes the window-based percentage of Viterbi predictions unchanged 'gapIterEM' iterations apart. Default is "MULTI".
+#' "ARCEL" (absolute relative change of the Q-function), "ACC" (agreement of Viterbi peak calls), or "all" (simultaneously check for MRCPE, MACPE, ARCEL, and ACC).
+#' For ACC, it computes the window-based percentage of Viterbi predictions unchanged 'gapIterEM' iterations apart. Default is "all".
 #' @param minZero a positive value for the minimum positive value allowed in computations to avoid having zeros. Default is .Machine$double.xmin.
 #' @param probCut a number between 0 and 1 for the cutoff of the rejection controlled EM algorithm. Default 0.05.
 #' @param quiet a logical indicating whether to print messages. Default is TRUE.
@@ -37,13 +37,13 @@
 #' control <- controlEM(maxIterEM = 100)
 #'
 #' @export
-controlEM = function(epsilonEM=c(1e-4,1e-4,1e-8,1e-4),
+controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-8, 'ACC' = 1e-4),
                      maxIterEM=500,
                      minIterEM=3,
                      gapIterEM=3,
                      maxCountEM=3,
                      maxDisp=1000,
-                     criterion='MULTI',
+                     criterion='all',
                      minZero=.Machine$double.xmin,
                      probCut=0.05,
                      quiet=TRUE,
@@ -58,7 +58,17 @@ controlEM = function(epsilonEM=c(1e-4,1e-4,1e-8,1e-4),
     
     # Checks for epsilonEM
     
-    if (!(length(epsilonEM)%in%c(1,4) & is.numeric(epsilonEM) & all(epsilonEM>0))){stop("epsilonEM must be a positive numerical value (or vector) of length 1 (or 4)")}
+    if (!(is.numeric(epsilonEM) & all(epsilonEM>0))){stop("epsilonEM must be a positive numerical value (or vector)")}
+    
+    # Check names for epsilonEM
+    internalEpsilonEM <- c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-8, 'ACC' = 1e-4)
+    
+    if(!is.null(names(epsilonEM))){
+        for(i in names(epsilonEM)[names(epsilonEM) %in% names(internalEpsilonEM)]){
+            internalEpsilonEM[i] <- epsilonEM[i]
+        }
+    }
+    epsilonEM <- internalEpsilonEM
     
     # Checks for maxit.em
     
@@ -82,7 +92,7 @@ controlEM = function(epsilonEM=c(1e-4,1e-4,1e-8,1e-4),
     
     # Checks for criterion
     
-    if (any((length(criterion)==1 & criterion %in% c('MRCPE','MACPE','ARCEL','ACC','MULTI'))==FALSE)){stop("value of 'criterion' must be 'MRCPE', 'MACPE', 'ARCEL', 'ACC', or 'MULTI'")}
+    if (any((length(criterion)==1 & criterion %in% c('MRCPE','MACPE','ARCEL','ACC','all'))==FALSE)){stop("value of 'criterion' must be 'MRCPE', 'MACPE', 'ARCEL', 'ACC', or 'all'")}
     
     # Checks for minZero
     
