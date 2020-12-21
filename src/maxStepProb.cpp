@@ -13,7 +13,7 @@ using namespace H5;
 // M-step (maximization w.r.t. initial and transition probabilities)
 //[[Rcpp::export]]
 Rcpp::List maxStepProb(Rcpp::StringVector nameMarginalProb,
-                 Rcpp::StringVector nameJointProb){
+                       Rcpp::StringVector nameJointProb){
     
     arma::mat logProb1; // marginal probabilities
     arma::mat logProb2; // joint probabilities
@@ -49,6 +49,15 @@ Rcpp::List maxStepProb(Rcpp::StringVector nameMarginalProb,
         idx1 = idx1 + K;
     }
     
-    return Rcpp::List::create(Rcpp::Named("pi") = exp(logProb1.row(0).t()),
+    // Initial probability
+    arma::vec pi = exp(logProb1.row(0).t());
+    
+    // Adding constraints to avoid underflow
+    pi.elem(find(pi<0.000001)).fill(0.000001);
+    pi = pi/sum(pi);
+    gamma.elem(find(gamma<0.000001)).fill(0.000001);
+    gamma = normalise(gamma,1,1);
+    
+    return Rcpp::List::create(Rcpp::Named("pi") = pi,
                               Rcpp::Named("gamma") = gamma);
 }
