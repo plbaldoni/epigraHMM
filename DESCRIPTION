@@ -20,10 +20,12 @@ Imports:
     csaw,
     S4Vectors,
     limma,
-    stats
-LinkingTo: Rcpp, RcppArmadillo
+    stats,
+    Rhdf5lib
+LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
 RoxygenNote: 7.1.1
 Encoding: UTF-8
+SystemRequirements: GNU make
 Suggests: 
     testthat,
     MMDiffBamSubset
