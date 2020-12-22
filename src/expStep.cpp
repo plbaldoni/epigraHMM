@@ -16,18 +16,13 @@ void expStep(arma::mat counts,
              arma::vec pi,
              arma::mat gamma,
              arma::mat logf,
-             Rcpp::StringVector nameForwardProb,
-             Rcpp::StringVector nameBackwardProb,
-             Rcpp::StringVector nameMarginalProb,
-             Rcpp::StringVector nameJointProb){
+             Rcpp::StringVector hdf5){
+    
+    std::vector<std::string> vstrings(1);
+    vstrings[0] = hdf5(0);
     
     int M = counts.n_rows; //Number of observations
     int K = pi.n_elem; //Number of states
-    
-    std::vector<std::string> vstringsFP(1);
-    std::vector<std::string> vstringsBP(1);
-    std::vector<std::string> vstringsP1(1);
-    std::vector<std::string> vstringsP2(1);
     
     arma::mat logFP(M,K); // log-forward probabilities
     arma::mat logBP(M,K); // log-backward probabilities
@@ -59,10 +54,10 @@ void expStep(arma::mat counts,
     }
     
     // Saving forward-backward probabilities
-    vstringsFP[0] = nameForwardProb(0);
-    vstringsBP[0] = nameBackwardProb(0);
-    logFP.save(vstringsFP[0]);
-    logBP.save(vstringsBP[0]);
+    // vstringsFP[0] = nameForwardProb(0);
+    // vstringsBP[0] = nameBackwardProb(0);
+    // logFP.save(vstringsFP[0]);
+    // logBP.save(vstringsBP[0]);
     
     // Calculating posterior probabilities now
     arma::mat logProb1(M,K); //Window-based posterior probabilities
@@ -95,8 +90,13 @@ void expStep(arma::mat counts,
     logProb2 = log(normalise(exp(logProb2),1,1));
     
     // Saving the posterior probabilities
-    vstringsP1[0] = nameMarginalProb(0);
-    logProb1.save(vstringsP1[0]);
-    vstringsP2[0] = nameJointProb(0);
-    logProb2.save(vstringsP2[0]);
+    //vstringsP1[0] = nameMarginalProb(0);
+    //logProb1.save(vstringsP1[0]);
+    //vstringsP2[0] = nameJointProb(0);
+    //logProb2.save(vstringsP2[0]);
+    
+    logFP.save(hdf5_name(vstrings[0], "logFP",hdf5_opts::replace));
+    logBP.save(hdf5_name(vstrings[0], "logBP",hdf5_opts::replace));
+    logProb1.save(hdf5_name(vstrings[0], "logProb1",hdf5_opts::replace));
+    logProb2.save(hdf5_name(vstrings[0], "logProb2",hdf5_opts::replace));
 }

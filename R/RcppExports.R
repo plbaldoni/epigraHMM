@@ -5,28 +5,28 @@ aggregate <- function(x, f) {
     .Call(`_epigraHMM_aggregate`, x, f)
 }
 
-expStep <- function(counts, pi, gamma, logf, nameForwardProb, nameBackwardProb, nameMarginalProb, nameJointProb) {
-    invisible(.Call(`_epigraHMM_expStep`, counts, pi, gamma, logf, nameForwardProb, nameBackwardProb, nameMarginalProb, nameJointProb))
+expStep <- function(counts, pi, gamma, logf, hdf5) {
+    invisible(.Call(`_epigraHMM_expStep`, counts, pi, gamma, logf, hdf5))
 }
 
 getMarginalProbability <- function(nameMarginalProb) {
     .Call(`_epigraHMM_getMarginalProbability`, nameMarginalProb)
 }
 
-getViterbiSequence <- function(nameForwardProb, pi, gamma) {
-    .Call(`_epigraHMM_getViterbiSequence`, nameForwardProb, pi, gamma)
+getViterbiSequence <- function(hdf5, pi, gamma) {
+    .Call(`_epigraHMM_getViterbiSequence`, hdf5, pi, gamma)
 }
 
-maxStepProb <- function(nameMarginalProb, nameJointProb) {
-    .Call(`_epigraHMM_maxStepProb`, nameMarginalProb, nameJointProb)
+maxStepProb <- function(hdf5) {
+    .Call(`_epigraHMM_maxStepProb`, hdf5)
 }
 
 rbinomVectorized <- function(prob) {
     .Call(`_epigraHMM_rbinomVectorized`, prob)
 }
 
-rejectionControlled <- function(nameMarginalProb, f, p) {
-    .Call(`_epigraHMM_rejectionControlled`, nameMarginalProb, f, p)
+rejectionControlled <- function(hdf5, f, p) {
+    .Call(`_epigraHMM_rejectionControlled`, hdf5, f, p)
 }
 
 reweight <- function(x, p) {

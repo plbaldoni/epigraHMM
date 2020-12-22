@@ -50,6 +50,39 @@ invertDispersion = function(par,model){
 }
 
 ################################################################################
+### Random generator for directory path name
+################################################################################
+
+generatePath = function(){
+    return(paste(sample(c(letters,LETTERS,0:9),10),collapse = ''))
+}
+
+################################################################################
+### Print message during EM algorithm
+################################################################################
+
+verbose = function(level,control,parlist = NULL,theta = NULL){
+    if(!control[['quiet']]){
+        if(level == 1){
+            message(paste0(c(rep('#',80))));message(Sys.time());message("Starting the EM algorithm")
+        }
+        if(level == 2){
+            message(paste0(c(rep('#',80))))
+            message('\rIteration: ',parlist[['iteration']],'. Error: ',paste(formatC(parlist[['error']], format = "e", digits = 2)),sep='')
+            message("\r",paste('Initial prob. estimates: '),paste(formatC(theta[['pi']], format = "e", digits = 2),collapse = ' '))
+            message("\r",paste('Transition prob. estimates: '),paste(formatC(theta[['gamma']], format = "e", digits = 2),collapse = ' '))
+            message("\r",paste('Model paramater estimates: '),paste(formatC(unlist(theta[['psi']]), format = "e", digits = 2),collapse = ' '))
+        }
+        if(level == 3){
+            message(paste0(c(rep('#',80))))
+            message("EM algorithm converged!")
+            message(Sys.time())
+            message(paste0(c(rep('#',80))))
+        }   
+    }
+}
+
+################################################################################
 ### Optimizer for glm.nb
 ################################################################################
 
@@ -87,11 +120,8 @@ initializerHMM = function(object,control){
     }
     
     # Creating subdirectories
-    paths <- list(logFP = file.path(path.expand(control$tempDir),'logFP',paste0('logFP_',colnames(object),'.bin')),
-                  logBP = file.path(path.expand(control$tempDir),'logBP',paste0('logBP_',colnames(object),'.bin')),
-                  logP1 = file.path(path.expand(control$tempDir),'logP1',paste0('logP1_',colnames(object),'.bin')),
-                  logP2 = file.path(path.expand(control$tempDir),'logP2',paste0('logP2_',colnames(object),'.bin')))
-    invisible(lapply(paths,function(x){if(!dir.exists(dirname(x))){dir.create(dirname(x),recursive = TRUE)}}))
+    hdf5File <- file.path(path.expand(control$tempDir),generatePath(),'output.h5')
+    invisible(lapply(hdf5File,function(x){if(!dir.exists(dirname(x))){dir.create(dirname(x),recursive = TRUE)}}))
     
     # General parameters
     M <- nrow(object)
@@ -117,9 +147,11 @@ initializerHMM = function(object,control){
     theta.old[['psi']] <- lapply(1:2,function(x){
         dt[which(z == x),list(mu = mean(log1p(ChIP)),sigma2 = stats::var(log1p(ChIP)))][,c(mu,(mu^2)/(sigma2+mu))]
     })
+    rm(z,score)
     
     # EM algorithm begins
-    message(paste0(c(rep('#',80))));message(Sys.time());message("Starting the EM algorithm")
+    ## Verbose
+    verbose(level = 1,control = control)
     
     while(parList[['count']]<control[['maxCountEM']] & parList[['iteration']]<control[['maxIterEM']]){
         
@@ -131,17 +163,16 @@ initializerHMM = function(object,control){
                 pi = theta.old[['pi']],
                 gamma = theta.old[['gamma']],
                 logf = do.call(cbind,lapply(1:2,function(x){stats::dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]),size = theta.old[['psi']][[x]][2],log = TRUE)})),
-                nameForwardProb = paths[['logFP']],nameBackwardProb = paths[['logBP']],
-                nameMarginalProb = paths[['logP1']],nameJointProb = paths[['logP2']])
+                hdf5 = hdf5File)
         
         # M-step
         ## Initial and transition probabilities
-        theta.new[c('pi','gamma')] <- maxStepProb(nameMarginalProb = paths[['logP1']],nameJointProb = paths[['logP2']])
+        theta.new[c('pi','gamma')] <- maxStepProb(hdf5 = hdf5File)
         
         ## Model parameters
         ### Rejection-controlled posterior probabilities
         probCut <-  (control[['probCut']]>0)*ifelse((0.9^parList[['iteration']])>=control[['probCut']],(0.9^parList[['iteration']]),control[['probCut']])
-        rcWeights <- lapply(rejectionControlled(nameMarginalProb = paths[['logP1']],f = dt$Group,p = probCut)[,1],
+        rcWeights <- lapply(rejectionControlled(hdf5 = hdf5File,f = dt$Group,p = probCut)[,1],
                             function(x){colnames(x) <- c('weights','Group');return(as.matrix(cbind(x,dtUnique[match(x[,2],Group),][,-c('Group')][,Intercept := 1])))})
         
         ### Calculating MLEs
@@ -160,18 +191,18 @@ initializerHMM = function(object,control){
         # Updating parameter history
         theta.old <- theta.new
         
-        #Outputing history
-        if(!control[['quiet']]){
-            message(paste0(c(rep('#',80))))
-            message('\rIteration: ',parList[['iteration']],'. Error: ',paste(formatC(parList[['error']], format = "e", digits = 2)),sep='')
-            message("\r",paste('Initial prob. estimates: '),paste(formatC(theta.new[['pi']], format = "e", digits = 2),collapse = ' '))
-            message("\r",paste('Transition prob. estimates: '),paste(formatC(theta.new[['gamma']], format = "e", digits = 2),collapse = ' '))
-            message("\r",paste('Model paramater estimates: '),paste(formatC(unlist(theta.new[['psi']]), format = "e", digits = 2),collapse = ' '))
-            message(paste0(c(rep('#',80))))
-        }
+        #Verbose
+        verbose(level = 2,control = control,parlist = parList,theta = theta.new)
     }
     
-    message("EM algorithm converged!");message(Sys.time());message(paste0(c(rep('#',80))))
+    # Verbose
+    verbose(level = 3,control = control)
     
-    return(list('viterbi' = getViterbiSequence(nameForwardProb = paths[['logFP']],pi = c(theta.new$pi),gamma = theta.new$gamma)))
+    # Getting viterbi sequence
+    viterbi <- getViterbiSequence(hdf5 = hdf5File,pi = c(theta.new$pi),gamma = theta.new$gamma)
+    
+    # Removing temporary file
+    system2('rm',hdf5File)
+    
+    return(list('viterbi' = viterbi))
 }

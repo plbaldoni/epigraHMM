@@ -9,13 +9,13 @@ using namespace H5;
 
 // Compute the Viterbi sequence
 //[[Rcpp::export]]
-arma::vec getViterbiSequence(Rcpp::StringVector nameForwardProb, arma::vec pi, arma::mat gamma) { 
+arma::vec getViterbiSequence(Rcpp::StringVector hdf5, arma::vec pi, arma::mat gamma) { 
     
     arma::mat logFP;
     
     std::vector<std::string> vstrings(1);
-    vstrings[0] = nameForwardProb(0);
-    logFP.load(vstrings[0]);
+    vstrings[0] = hdf5(0);
+    logFP.load(hdf5_name(vstrings[0], "logFP"));
     
     int M = logFP.n_rows;
     int K = logFP.n_cols;

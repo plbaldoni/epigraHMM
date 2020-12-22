@@ -12,20 +12,16 @@ using namespace H5;
 
 // M-step (maximization w.r.t. initial and transition probabilities)
 //[[Rcpp::export]]
-Rcpp::List maxStepProb(Rcpp::StringVector nameMarginalProb,
-                       Rcpp::StringVector nameJointProb){
+Rcpp::List maxStepProb(Rcpp::StringVector hdf5){
     
     arma::mat logProb1; // marginal probabilities
     arma::mat logProb2; // joint probabilities
     
     // Loading probabilities
-    std::vector<std::string> vstringsProb1(1);
-    vstringsProb1[0] = nameMarginalProb(0);
-    logProb1.load(vstringsProb1[0]);
-    
-    std::vector<std::string> vstringsProb2(1);
-    vstringsProb2[0] = nameJointProb(0);
-    logProb2.load(vstringsProb2[0]);
+    std::vector<std::string> vstrings(1);
+    vstrings[0] = hdf5(0);
+    logProb1.load(hdf5_name(vstrings[0], "logProb1"));
+    logProb2.load(hdf5_name(vstrings[0], "logProb2"));
     
     // Number of states & windows
     int M = logProb1.n_rows;
