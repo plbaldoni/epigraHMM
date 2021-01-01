@@ -11,7 +11,7 @@ using namespace H5;
 
 // Applies reweight.cpp and aggregate.cpp for rejection-controlled posterior probabilities
 //[[Rcpp::export]]
-arma::field<arma::mat> rejectionControlled(Rcpp::StringVector hdf5,arma::vec f,double p) { 
+arma::field<arma::mat> consensusRejectionControlled(Rcpp::StringVector hdf5,arma::vec f,double p) { 
     arma::mat logProb1;
     arma::vec reWeights;
     
