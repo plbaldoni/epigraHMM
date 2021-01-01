@@ -5,7 +5,7 @@
 \title{Control parameters for the EM algorithm from epigraHMM}
 \usage{
 controlEM(
-  epsilonEM = c(MRCPE = 1e-04, MACPE = 1e-04, ARCEL = 1e-08, ACC = 1e-04),
+  epsilonEM = c(MRCPE = 1e-04, MACPE = 1e-04, ARCEL = 1e-04),
   maxIterEM = 500,
   minIterEM = 3,
   gapIterEM = 3,
@@ -26,7 +26,7 @@ controlEM(
 )
 }
 \arguments{
-\item{epsilonEM}{Either a positive value or a vector of size 4 with the convergence tolerance values for the EM algorithm (see 'criterion' below). Default is c(1e-4,1e-4,1e-8,1e-4).}
+\item{epsilonEM}{a named vector of positive values specifying up to four possible convergence criterion tolerances for the EM algorithm (see 'criterion' below). Default is c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-4).}
 
 \item{maxIterEM}{a positive integer giving the maximum number of EM iterations. Default is 500.}
 

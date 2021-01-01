@@ -2,7 +2,7 @@
 #'
 #' This function passes controlling parameters for the EM algorithm implemented in the epigraHMM package.
 #'
-#' @param epsilonEM Either a positive value or a vector of size 4 with the convergence tolerance values for the EM algorithm (see 'criterion' below). Default is c(1e-4,1e-4,1e-8,1e-4).
+#' @param epsilonEM a named vector of positive values specifying up to four possible convergence criterion tolerances for the EM algorithm (see 'criterion' below). Default is c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-4).
 #' @param maxIterEM a positive integer giving the maximum number of EM iterations. Default is 500.
 #' @param minIterEM a positive integer giving the minimum number of EM iterations to start evaluating the convergence. Default is 3.
 #' @param gapIterEM a positive integer giving the number of EM iterations apart to compute the convergence criterion. Default is 3.
@@ -37,7 +37,7 @@
 #' control <- controlEM(maxIterEM = 100)
 #'
 #' @export
-controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-8, 'ACC' = 1e-4),
+controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-4),
                      maxIterEM=500,
                      minIterEM=3,
                      gapIterEM=3,
@@ -61,7 +61,7 @@ controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-8, 
     if (!(is.numeric(epsilonEM) & all(epsilonEM>0))){stop("epsilonEM must be a positive numerical value (or vector)")}
     
     # Check names for epsilonEM
-    internalEpsilonEM <- c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-8, 'ACC' = 1e-4)
+    internalEpsilonEM <- c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-4)
     
     if(!is.null(names(epsilonEM))){
         for(i in names(epsilonEM)[names(epsilonEM) %in% names(internalEpsilonEM)]){
