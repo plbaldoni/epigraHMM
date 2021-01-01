@@ -21,7 +21,8 @@ Imports:
     S4Vectors,
     limma,
     stats,
-    Rhdf5lib
+    Rhdf5lib,
+    Matrix
 LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
 RoxygenNote: 7.1.1
 Encoding: UTF-8
