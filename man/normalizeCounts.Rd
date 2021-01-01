@@ -4,10 +4,12 @@
 \alias{normalizeCounts}
 \title{Normalize counts}
 \usage{
-normalizeCounts(object, ...)
+normalizeCounts(object, control, ...)
 }
 \arguments{
 \item{object}{an epigraHMMDataSet}
+
+\item{control}{list of control arguments from controlEM()}
 
 \item{...}{arguments to be passed to \code{\link[limma]{loessFit}} for loess calculation}
 }

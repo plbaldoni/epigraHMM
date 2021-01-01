@@ -3,6 +3,7 @@
 #' This function performs a non-linear normalization of counts with respect to a reference sample (geometric mean)
 #'
 #' @param object an epigraHMMDataSet
+#' @param control list of control arguments from controlEM()
 #' @param ... arguments to be passed to \code{\link[limma]{loessFit}} for loess calculation
 #'
 #' @details
@@ -21,7 +22,7 @@
 #' @importFrom limma loessFit
 #'
 #' @export
-normalizeCounts <- function(object,...){
+normalizeCounts <- function(object,control,...){
 
     # Checking input
     if (!(methods::is(object)[1]=='RangedSummarizedExperiment')){
@@ -40,6 +41,9 @@ normalizeCounts <- function(object,...){
     offsets <- do.call(cbind,lapply(seq_len(ncol(SummarizedExperiment::assay(object,'counts'))),function(x){
         return(limma::loessFit(y=(logSample[,x] - logReference),x=(logSample[,x] + logReference)/2,...)$fitted)
     }))
+    
+    # Trimming offsets
+    if(!is.null(control[['trimOffset']])){offsets <- round(offsets,digits = control[['trimOffset']])}
 
     # Organizing output
     if('offsets' %in% SummarizedExperiment::assayNames(object)){
