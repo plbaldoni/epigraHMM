@@ -12,8 +12,7 @@ using namespace H5;
 
 // E-step of HMM (forward-backward probability + posterior probability calculation)
 //[[Rcpp::export]]
-void expStep(arma::mat counts,
-             arma::vec pi,
+void expStep(arma::vec pi,
              arma::mat gamma,
              arma::mat logf,
              Rcpp::StringVector hdf5){
@@ -21,7 +20,7 @@ void expStep(arma::mat counts,
     std::vector<std::string> vstrings(1);
     vstrings[0] = hdf5(0);
     
-    int M = counts.n_rows; //Number of observations
+    int M = logf.n_rows; //Number of observations
     int K = pi.n_elem; //Number of states
     
     arma::mat logFP(M,K); // log-forward probabilities
@@ -53,16 +52,10 @@ void expStep(arma::mat counts,
         }
     }
     
-    // Saving forward-backward probabilities
-    // vstringsFP[0] = nameForwardProb(0);
-    // vstringsBP[0] = nameBackwardProb(0);
-    // logFP.save(vstringsFP[0]);
-    // logBP.save(vstringsBP[0]);
-    
     // Calculating posterior probabilities now
     arma::mat logProb1(M,K); //Window-based posterior probabilities
     arma::mat logProb2(M,K*K); //Window-based joint posterior probabilities
-
+    
     // Avoiding underflow
     arma::mat d(1,K);
     d.row(0) = logFP.row(M-1);
@@ -89,12 +82,10 @@ void expStep(arma::mat counts,
     logProb1 = log(normalise(exp(logProb1),1,1));
     logProb2 = log(normalise(exp(logProb2),1,1));
     
-    // Saving the posterior probabilities
-    //vstringsP1[0] = nameMarginalProb(0);
-    //logProb1.save(vstringsP1[0]);
-    //vstringsP2[0] = nameJointProb(0);
-    //logProb2.save(vstringsP2[0]);
+    // Saving the log-likelihood function
+    logf.save(hdf5_name(vstrings[0], "logLikelihood",hdf5_opts::replace));
     
+    // Saving the posterior probabilities
     logFP.save(hdf5_name(vstrings[0], "logFP",hdf5_opts::replace));
     logBP.save(hdf5_name(vstrings[0], "logBP",hdf5_opts::replace));
     logProb1.save(hdf5_name(vstrings[0], "logProb1",hdf5_opts::replace));
