@@ -9,7 +9,9 @@ using namespace H5;
 
 // Compute the Viterbi sequence
 //[[Rcpp::export]]
-arma::vec getViterbiSequence(Rcpp::StringVector hdf5, arma::vec pi, arma::mat gamma) { 
+arma::vec computeViterbiSequence(Rcpp::StringVector hdf5,
+                             arma::vec pi,
+                             arma::mat gamma) { 
     
     arma::mat logFP;
     
@@ -44,6 +46,9 @@ arma::vec getViterbiSequence(Rcpp::StringVector hdf5, arma::vec pi, arma::mat ga
         AUXS = LOGV.row(j).t() + log(gamma.col(S[j+1]));
         S[j] = AUXS.index_max();
     }
+    
+    // Saving the posterior probabilities
+    S.save(hdf5_name(vstrings[0], "viterbi",hdf5_opts::replace));
 
     return S;
 }
