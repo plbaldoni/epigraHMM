@@ -281,8 +281,9 @@ innerExpStep = function(dt,theta,N,M,model,hdf5,minZero){
     ll <- rapply(ll,function(x){ifelse(exp(x)==0,log(minZero),x)}, how = "replace")
     sumExpLL <- Reduce(`+`,lapply(ll,exp))
     
-    saveMixtureProb(eta = vapply(seq_len(length(theta$delta)),FUN = function(b){exp(ll[[b]])/sumExpLL},FUN.VALUE = vector('double',length = M)),
-                    hdf5 = hdf5)
+    rhdf5::h5write(obj = vapply(seq_len(length(theta$delta)),FUN = function(b){exp(ll[[b]])/sumExpLL},FUN.VALUE = vector('double',length = M)),
+                   file = hdf5,
+                   name = 'mixtureProb')
 }
 
 ################################################################################
@@ -389,6 +390,18 @@ checkPath = function(path){
 }
 
 ################################################################################
+### Function to check counts for convergence
+################################################################################
+
+checkConvergence <- function(controlHist,control){
+    if(control[['criterion']] == 'all'){
+        return(max(controlHist[[length(controlHist)]][['count']]))
+    } else{
+        return(controlHist[[length(controlHist)]][['count']][[control[['criterion']]]])
+    }
+}
+
+################################################################################
 ### Initial peak caller
 ################################################################################
 
@@ -438,7 +451,7 @@ initializerHMM = function(object,control){
     ## Verbose
     verbose(level = 1,control = control)
     
-    while(max(controlHist[[length(controlHist)]][['count']])<control[['maxCountEM']] & controlHist[[length(controlHist)]][['iteration']]<control[['maxIterEM']]){
+    while(checkConvergence(controlHist,control)<control[['maxCountEM']] & controlHist[[length(controlHist)]][['iteration']]<control[['maxIterEM']]){
         
         # Update iteration
         controlHist[[length(controlHist)]][['iteration']] = controlHist[[length(controlHist)]][['iteration']] + 1
@@ -548,7 +561,7 @@ mixNBHMM = function(object,control){
     ## Verbose
     verbose(level = 1,control = control)
     
-    while(max(controlHist[[length(controlHist)]][['count']])<control[['maxCountEM']] & controlHist[[length(controlHist)]][['iteration']]<control[['maxIterEM']]){
+    while(checkConvergence(controlHist,control)<control[['maxCountEM']] & controlHist[[length(controlHist)]][['iteration']]<control[['maxIterEM']]){
         
         # Update iteration
         controlHist[[length(controlHist)]][['iteration']] = controlHist[[length(controlHist)]][['iteration']] + 1

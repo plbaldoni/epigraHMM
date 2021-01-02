@@ -22,6 +22,7 @@ Imports:
     limma,
     stats,
     Rhdf5lib,
+    rhdf5,
     Matrix
 LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
 RoxygenNote: 7.1.1
