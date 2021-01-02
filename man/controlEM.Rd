@@ -5,7 +5,7 @@
 \title{Control parameters for the EM algorithm from epigraHMM}
 \usage{
 controlEM(
-  epsilonEM = c(MRCPE = 1e-04, MACPE = 1e-04, ARCEL = 1e-04),
+  epsilonEM = c(MRCPE = 1e-04, MACPE = 1e-04, ARCEL = 1e-06),
   maxIterEM = 500,
   minIterEM = 3,
   gapIterEM = 3,
@@ -26,7 +26,7 @@ controlEM(
 )
 }
 \arguments{
-\item{epsilonEM}{a named vector of positive values specifying up to four possible convergence criterion tolerances for the EM algorithm (see 'criterion' below). Default is c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-4).}
+\item{epsilonEM}{a named vector of positive values specifying up to four possible convergence criterion tolerances for the EM algorithm (see 'criterion' below). Default is c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6).}
 
 \item{maxIterEM}{a positive integer giving the maximum number of EM iterations. Default is 500.}
 
@@ -39,8 +39,7 @@ controlEM(
 \item{maxDisp}{a positive value for the upper limit constraint of the dispersion parameters. Default is 1000.}
 
 \item{criterion}{a character specifying the convergence criterion. Either "MRCPE" (maximum absolute relative change in parameter estimates), "MACPE" (maximum absolute change of parameter estimates),
-"ARCEL" (absolute relative change of the Q-function), "ACC" (agreement of Viterbi peak calls), or "all" (simultaneously check for MRCPE, MACPE, ARCEL, and ACC).
-For ACC, it computes the window-based percentage of Viterbi predictions unchanged 'gapIterEM' iterations apart. Default is "all".}
+"ARCEL" (absolute relative change of the Q-function), or "all" (simultaneously check for MRCPE, MACPE, and ARCEL). Default is "all".}
 
 \item{minZero}{a positive value for the minimum positive value allowed in computations to avoid having zeros. Default is .Machine$double.xmin.}
 

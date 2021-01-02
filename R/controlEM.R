@@ -2,15 +2,14 @@
 #'
 #' This function passes controlling parameters for the EM algorithm implemented in the epigraHMM package.
 #'
-#' @param epsilonEM a named vector of positive values specifying up to four possible convergence criterion tolerances for the EM algorithm (see 'criterion' below). Default is c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-4).
+#' @param epsilonEM a named vector of positive values specifying up to four possible convergence criterion tolerances for the EM algorithm (see 'criterion' below). Default is c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6).
 #' @param maxIterEM a positive integer giving the maximum number of EM iterations. Default is 500.
 #' @param minIterEM a positive integer giving the minimum number of EM iterations to start evaluating the convergence. Default is 3.
 #' @param gapIterEM a positive integer giving the number of EM iterations apart to compute the convergence criterion. Default is 3.
 #' @param maxCountEM a positive integer giving the number of consecutive EM iterations satisfying the convergence criterion in order to stop the algorithm. Default is 3.
 #' @param maxDisp a positive value for the upper limit constraint of the dispersion parameters. Default is 1000.
 #' @param criterion a character specifying the convergence criterion. Either "MRCPE" (maximum absolute relative change in parameter estimates), "MACPE" (maximum absolute change of parameter estimates),
-#' "ARCEL" (absolute relative change of the Q-function), "ACC" (agreement of Viterbi peak calls), or "all" (simultaneously check for MRCPE, MACPE, ARCEL, and ACC).
-#' For ACC, it computes the window-based percentage of Viterbi predictions unchanged 'gapIterEM' iterations apart. Default is "all".
+#' "ARCEL" (absolute relative change of the Q-function), or "all" (simultaneously check for MRCPE, MACPE, and ARCEL). Default is "all".
 #' @param minZero a positive value for the minimum positive value allowed in computations to avoid having zeros. Default is .Machine$double.xmin.
 #' @param probCut a number between 0 and 1 for the cutoff of the rejection controlled EM algorithm. Default 0.05.
 #' @param quiet a logical indicating whether to print messages. Default is TRUE.
@@ -37,7 +36,7 @@
 #' control <- controlEM(maxIterEM = 100)
 #'
 #' @export
-controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-4),
+controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6),
                      maxIterEM=500,
                      minIterEM=3,
                      gapIterEM=3,
@@ -61,7 +60,7 @@ controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-4),
     if (!(is.numeric(epsilonEM) & all(epsilonEM>0))){stop("epsilonEM must be a positive numerical value (or vector)")}
     
     # Check names for epsilonEM
-    internalEpsilonEM <- c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-4)
+    internalEpsilonEM <- c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6)
     
     if(!is.null(names(epsilonEM))){
         for(i in names(epsilonEM)[names(epsilonEM) %in% names(internalEpsilonEM)]){
