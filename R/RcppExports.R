@@ -45,10 +45,6 @@ reweight <- function(x, p) {
     .Call(`_epigraHMM_reweight`, x, p)
 }
 
-saveMixtureProb <- function(eta, hdf5) {
-    invisible(.Call(`_epigraHMM_saveMixtureProb`, eta, hdf5))
-}
-
 simulateMarkovChain <- function(P, n) {
     .Call(`_epigraHMM_simulateMarkovChain`, P, n)
 }

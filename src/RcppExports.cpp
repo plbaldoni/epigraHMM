@@ -140,17 +140,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// saveMixtureProb
-void saveMixtureProb(arma::mat eta, Rcpp::StringVector hdf5);
-RcppExport SEXP _epigraHMM_saveMixtureProb(SEXP etaSEXP, SEXP hdf5SEXP) {
-BEGIN_RCPP
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type eta(etaSEXP);
-    Rcpp::traits::input_parameter< Rcpp::StringVector >::type hdf5(hdf5SEXP);
-    saveMixtureProb(eta, hdf5);
-    return R_NilValue;
-END_RCPP
-}
 // simulateMarkovChain
 NumericVector simulateMarkovChain(NumericMatrix P, int n);
 RcppExport SEXP _epigraHMM_simulateMarkovChain(SEXP PSEXP, SEXP nSEXP) {
@@ -176,7 +165,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_epigraHMM_maxStepProb", (DL_FUNC) &_epigraHMM_maxStepProb, 1},
     {"_epigraHMM_rbinomVectorized", (DL_FUNC) &_epigraHMM_rbinomVectorized, 1},
     {"_epigraHMM_reweight", (DL_FUNC) &_epigraHMM_reweight, 2},
-    {"_epigraHMM_saveMixtureProb", (DL_FUNC) &_epigraHMM_saveMixtureProb, 2},
     {"_epigraHMM_simulateMarkovChain", (DL_FUNC) &_epigraHMM_simulateMarkovChain, 2},
     {NULL, NULL, 0}
 };
