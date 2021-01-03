@@ -20,7 +20,8 @@
 #' @param maxSigma2 a positive value for the maximum positive value of the variance component allowed in computations. Default is 10.
 #' @param minSigma2 a positive value for the minimum positive value of the variance component allowed in computations. Default is 1e-8.
 #' @param pattern either NULL (the default) or a list with length equal to the number of differential patterns to be modeled by the differential HMM state. See Details section below.
-#' @param tempDir a string where intermediate results will be saved. Default is `tempdir()`.
+#' @param tempDir a string where results will be saved. Default is `tempdir()`.
+#' @param fileName a string with the name of the result files. Default is `epigraHMM`.
 #'
 #' @details
 #' If \code{pattern} is NULL, every possible combinatorial pattern will be considered. If \code{pattern} is a list, elements of it should specify the differential patterns to be modeled by each mixture component.
@@ -53,7 +54,8 @@ controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6),
                      maxSigma2 = 10,
                      minSigma2 = 1e-8,
                      pattern = NULL,
-                     tempDir = tempdir()) {
+                     tempDir = tempdir(),
+                     fileName = 'epigraHMM') {
     
     # Checks for epsilonEM
     
@@ -156,5 +158,6 @@ controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6),
          maxSigma2 = maxSigma2,
          minSigma2 = minSigma2,
          pattern = pattern,
-         tempDir = tempDir)
+         tempDir = tempDir,
+         fileName = fileName)
 }
