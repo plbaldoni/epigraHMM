@@ -22,7 +22,8 @@ controlEM(
   maxSigma2 = 10,
   minSigma2 = 1e-08,
   pattern = NULL,
-  tempDir = tempdir()
+  tempDir = tempdir(),
+  fileName = "epigraHMM"
 )
 }
 \arguments{
@@ -61,7 +62,9 @@ controlEM(
 
 \item{pattern}{either NULL (the default) or a list with length equal to the number of differential patterns to be modeled by the differential HMM state. See Details section below.}
 
-\item{tempDir}{a string where intermediate results will be saved. Default is `tempdir()`.}
+\item{tempDir}{a string where results will be saved. Default is `tempdir()`.}
+
+\item{fileName}{a string with the name of the result files. Default is `epigraHMM`.}
 }
 \value{
 A list with components equal to the arguments
