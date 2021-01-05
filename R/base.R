@@ -108,20 +108,24 @@ getError <- function(controlHist,parHist,control){
 ### Optimizer for glmNB
 ################################################################################
 
-optimNB <- function(par,y,x,offset,weights,control){
+optimNB <- function(par,y,x,offset,weights,control,dist){
     
-    tryCatch({assign('model',stats::optim(par=invertDispersion(par,model='nb'),
-                                          fn=glmNB,
-                                          gr=derivNB,
-                                          method='L-BFGS-B',
-                                          lower=c(rep(-Inf,ncol(x)),1/control$maxDisp),
-                                          y = y,
-                                          x = x,
-                                          offset = offset,
-                                          weights = weights))},
-             error=function(e){assign('model',list('par' = invertDispersion(par,model='nb'),'convergence' = 99),inherits = TRUE)})
-    
-    model$par <- invertDispersion(model$par,model='nb')
+    if(dist == 'nb'){
+        tryCatch({assign('model',stats::optim(par=invertDispersion(par,model='nb'),
+                                              fn=glmNB,
+                                              gr=derivNB,
+                                              method='L-BFGS-B',
+                                              lower=c(rep(-Inf,ncol(x)),1/control$maxDisp),
+                                              y = y,
+                                              x = x,
+                                              offset = offset,
+                                              weights = weights))},
+                 error=function(e){assign('model',list('par' = invertDispersion(par,model='nb'),'convergence' = 99),inherits = TRUE)})
+        
+        model$par <- invertDispersion(model$par,model='nb')   
+    } else{
+        message('to complete')
+    }
     
     return(model)
 }
@@ -205,24 +209,35 @@ estimateMixtureProb = function(zDifferential,zSeq,B){
 ### Estimate model coefficients for differential model initialization
 ################################################################################
 
-estimateCoefficients <- function(z,dt,dist){
+estimateCoefficients <- function(z,dt,dist,type){
     Window = ChIP = offsets = mu = sigma2 = NULL
     
     parList <- lapply(range(z),function(x){
         subpar <- dt[Window %in% which(z == x),list(mu = mean(ChIP/exp(offsets)),sigma2 = stats::var(ChIP/exp(offsets)))]
-        subpar[,c((sigma2-mu)/(sigma2+mu^2-mu),mu,(mu^2)/(sigma2-mu))]
+        subpar[,c(zip = (sigma2-mu)/(sigma2+mu^2-mu),mu = mu,disp = (mu^2)/(sigma2-mu))]
     })
     
     par <- list()
-    if(dist == 'nb'){
-        par[[1]] <- log(parList[[1]][-1])
-        par[[2]] <- log(parList[[2]][-1]) - par[[1]]
+    if(type == 'differential'){
+        if(dist == 'nb'){
+            par[[1]] <- log(parList[[1]][-1])
+            par[[2]] <- log(parList[[2]][-1]) - log(parList[[1]][-1])
+        } else{
+            par[[1]] <- log(parList[[1]])
+            par[[2]] <- log(parList[[2]][-1]) - log(parList[[1]][-1])
+        }
     } else{
-        par[[1]] <- log(parList[[1]])
-        par[[2]] <- log(parList[[2]][-1]) - par[[1]][-1]
+        if(dist == 'nb'){
+            par[[1]] <- c(log(parList[[1]]['mu']),ifelse('controls' %in% names(dt),0,NA),parList[[1]]['disp'])
+            par[[2]] <- c(log(parList[[2]]['mu']),ifelse('controls' %in% names(dt),0,NA),parList[[2]]['disp'])
+        } else{
+            par[[1]] <- c(log(parList[[1]]['zip']),ifelse('controls' %in% names(dt),0,NA),
+                          log(parList[[1]]['mu']),ifelse('controls' %in% names(dt),0,NA),parList[[1]]['disp'])
+            par[[2]] <- c(log(parList[[2]]['mu']),ifelse('controls' %in% names(dt),0,NA),parList[[2]]['disp'])
+        }
     }
     
-    return(par)
+    return(lapply(par,function(x){unname(x[!is.na(x)])}))
 }
 
 ################################################################################
@@ -289,6 +304,35 @@ loglikDifferentialHMM = function(dt,theta,N,M,minZero,dist){
         LL[,2] <- log(base::Reduce(`+`,lapply(loglikDifferential(dt = dt,delta = delta,psi = psi,N = N,M = M,dist = dist,minZero = minZero),exp)))
         #LL from Enrichment
         LL[,3] = rowSums(matrix(dt[,stats::dnbinom(x = ChIP,mu = exp(psi[2]+psi[4]+offsets),size = exp(psi[3] + psi[5]),log = TRUE)],nrow=M,ncol=N,byrow=FALSE))
+    }
+    
+    LL[is.infinite(LL)] <- log(minZero)
+    return(LL)
+}
+
+################################################################################
+### Function for log-likelihood function of HMM with NB distributions for
+### consensus peak calling
+################################################################################
+
+loglikConsensusHMM = function(dt,theta,N,M,minZero,dist){
+    
+    ChIP = offsets = NULL
+    
+    psi <- unlist(theta$psi)
+    LL <- matrix(0,nrow=M,ncol=2)
+    useControl <- ('controls' %in% names(dt))
+    
+    if(dist == 'nb'){
+        #LL from Background
+        LL[,1] <- rowSums(matrix(dt[,stats::dnbinom(x = ChIP,mu = exp(theta$psi[[1]][1]+ifelse(useControl,theta$psi[[1]][2]*controls,0)+offsets),size = ifelse(useControl,theta$psi[[1]][3],theta$psi[[1]][2]),log=TRUE)],nrow=M,ncol=N,byrow=FALSE))
+        #LL from Enrichment
+        LL[,2] <- rowSums(matrix(dt[,stats::dnbinom(x = ChIP,mu = exp(theta$psi[[2]][1]+ifelse(useControl,theta$psi[[2]][2]*controls,0)+offsets),size = ifelse(useControl,theta$psi[[2]][3],theta$psi[[2]][2]),log=TRUE)],nrow=M,ncol=N,byrow=FALSE))
+    } else{
+        # #LL from Background
+        # LL[,1] = rowSums(matrix(dt[,dzinb(x = ChIP,mu = exp(psi[2]+offsets),size = exp(psi[3]),zip = exp(psi[1])/(1+exp(psi[1])),minZero = minZero)],nrow=M,ncol=N,byrow=FALSE))
+        # #LL from Enrichment
+        # LL[,2] = rowSums(matrix(dt[,stats::dnbinom(x = ChIP,mu = exp(psi[2]+psi[4]+offsets),size = exp(psi[3] + psi[5]),log = TRUE)],nrow=M,ncol=N,byrow=FALSE))
     }
     
     LL[is.infinite(LL)] <- log(minZero)
@@ -582,9 +626,13 @@ initializerHMM = function(object,control){
         
         ### Calculating MLEs
         optimMLE <- lapply(seq_len(length(rcWeights)),function(x){
-            optimNB(par = theta.old$psi[[x]],y = rcWeights[[x]][,'ChIP'],
-                    x = rcWeights[[x]][,'Intercept',drop = FALSE],offset = rcWeights[[x]][,'offsets'],
-                    weights = rcWeights[[x]][,'weights'],control = control)
+            optimNB(par = theta.old$psi[[x]],
+                    y = rcWeights[[x]][,'ChIP'],
+                    x = rcWeights[[x]][,'Intercept',drop = FALSE],
+                    offset = rcWeights[[x]][,'offsets'], 
+                    weights = rcWeights[[x]][,'weights'],
+                    control = control,
+                    dist = 'nb')
         })
         theta.new[['psi']] <- lapply(optimMLE,function(x){x[['par']]})
         
@@ -663,7 +711,7 @@ differentialHMM = function(object,control,dist){
     theta.old[['delta']] <- estimateMixtureProb(zDifferential = zPatterns$group$Group[!(zPatterns$group$Group%in%c(1,max(zPatterns$group$Group)))],
                                                 zSeq = zMixtures$zSeq,
                                                 B = zMixtures$B)
-    theta.old[['psi']] <- estimateCoefficients(z = zPatterns$group$Group,dt = dt,dist = dist)
+    theta.old[['psi']] <- estimateCoefficients(z = zPatterns$group$Group,dt = dt,dist = dist,type = 'differential')
     
     # EM algorithm begins
     ## Verbose
@@ -746,6 +794,126 @@ differentialHMM = function(object,control,dist){
     rhdf5::h5write(obj = gsub('1','E',gsub('0','B',do.call(paste0,zPatterns$ref[unlist(zMixtures$zSeq),seq_len(nGroup),with = FALSE]))),
                    file = hdf5File,
                    name = 'mixturePatterns')
+    
+    # Saving viterbi sequence
+    invisible(computeViterbiSequence(hdf5 = hdf5File,pi = theta.new$pi,gamma = theta.new$gamma))
+    
+    # Saving output path to file
+    S4Vectors::metadata(object) <- list('output' = hdf5File,
+                                        'control' = control,
+                                        'history' = list('control' = data.table::rbindlist(lapply(controlHist,function(x){data.table::data.table(t(unlist(x)))})),
+                                                         'parameter' = data.table::rbindlist(lapply(parHist,function(x){data.table::data.table(t(unlist(x)))}))))
+    
+    return(object)
+}
+
+################################################################################
+### Function for consensus peak calling
+################################################################################
+
+consensusHMM = function(object,control,dist)
+{
+    
+    # Creating subdirectories
+    hdf5File <- checkPath(file.path(path.expand(control[['tempDir']]),paste0(control[['fileName']],'.h5')))
+    invisible(lapply(hdf5File,function(x){if(!dir.exists(dirname(x))){dir.create(dirname(x),recursive = TRUE)}}))
+    
+    # General parameters
+    M <- nrow(object)
+    N <- ncol(object)
+    K <- 2
+    parHist <- list()
+    controlHist <- list(controlList())
+    theta.old <- sapply(c('pi','gamma','psi'),function(x) NULL)
+    theta.new <- sapply(c('pi','gamma','psi'),function(x) NULL)
+    
+    # Initializing patterns & mixtures
+    zPatterns <- enumeratePatterns(object = object,group = SummarizedExperiment::colData(object)$condition)
+    
+    # Transforming data into data.table
+    dt <- data.table::data.table(Window = rep(seq_len(M),N),ChIP = as.numeric(assay(object)),offsets = as.numeric(assay(object,'offsets')))
+    if('controls' %in% SummarizedExperiment::assayNames(object)){
+        # Adding control & keying
+        dt[,controls := as.numeric(assay(object,'controls'))]
+        dt[,Group := .GRP,by = c('ChIP','controls','offsets')]
+        
+        # Creating unique data.table
+        dtUnique <- unique(dt,by='Group')[,c('ChIP','controls','offsets','Group'),with = FALSE]
+        setkey(dtUnique,Group)
+    } else{
+        #Keying
+        dt[,Group := .GRP,by = c('ChIP','offsets')]
+        
+        # Creating unique data.table
+        dtUnique <- unique(dt,by='Group')[,c('ChIP','offsets','Group'),with = FALSE]
+        setkey(dtUnique,Group)
+    }
+    
+    # Parameter initializations
+    theta.old[['pi']] <- c(0.999,0.001)
+    theta.old[['gamma']] <- estimateTransitionProb(chain = zPatterns$group$Group,numStates = K)
+    theta.old[['psi']] <- estimateCoefficients(z = zPatterns$group$Group,dt = dt,dist = dist,type = 'consensus')
+    
+    # EM algorithm begins
+    ## Verbose
+    verbose(level = 1,control = control)
+    
+    while(checkConvergence(controlHist,control)<control[['maxCountEM']] & controlHist[[length(controlHist)]][['iteration']]<control[['maxIterEM']]){
+        
+        # Update iteration
+        controlHist[[length(controlHist)]][['iteration']] = controlHist[[length(controlHist)]][['iteration']] + 1
+        
+        # E-step
+        expStep(pi = theta.old[['pi']],
+                gamma = theta.old[['gamma']],
+                logf = loglikConsensusHMM(dt = dt,theta = theta.old,N = N,M = M,minZero = control[['minZero']],dist = dist),
+                hdf5 = hdf5File)
+        
+        # M-step
+        ## Initial and transition probabilities
+        theta.new[c('pi','gamma')] <- maxStepProb(hdf5 = hdf5File)
+        
+        ## Model parameters
+        ### Rejection-controlled posterior probabilities
+        probCut <-  (control[['probCut']]>0)*max(c(0.9^controlHist[[length(controlHist)]][['iteration']],control[['probCut']]))
+        rcWeights <- lapply(consensusRejectionControlled(hdf5 = hdf5File,f = dt$Group,p = probCut)[,1],
+                            function(x){colnames(x) <- c('weights','Group');return(as.matrix(cbind(x,dtUnique[match(x[,2],Group),][,-c('Group')][,Intercept := 1])))})
+        
+        ### Calculating MLEs
+        optimMLE <- lapply(seq_len(length(rcWeights)),function(i){
+            optimNB(par = theta.old$psi[[i]],
+                    y = rcWeights[[i]][,'ChIP'],
+                    x = rcWeights[[i]][,ifelse('controls' %in% names(dt),c('Intercept','controls'),'Intercept'),drop = FALSE],
+                    offset = rcWeights[[i]][,'offsets'],
+                    weights = rcWeights[[i]][,'weights'],
+                    control = control,
+                    dist = dist)
+        })
+        theta.new[['psi']] <- lapply(optimMLE,function(x){x[['par']]})
+        
+        # Updating parHist
+        parHist[[controlHist[[length(controlHist)]][['iteration']]]] <- theta.new
+        
+        # Checking convergence
+        ## Q-function (evaluated on the old parameters to avoid calculating the log-likelihood again)
+        controlHist[[length(controlHist)]][['q']] <- computeQFunction(hdf5 = hdf5File,pi = theta.old[['pi']],gamma = theta.old[['gamma']])
+        controlHist[[length(controlHist)]][['convergence']] <-  1*any(!unname(unlist(lapply(optimMLE,function(x){x[['convergence']]}))) == 0)
+        controlHist[[length(controlHist)]][['error']] <- getError(controlHist = controlHist,parHist = parHist,control = control)
+        controlHist[[length(controlHist)]][['count']] <- (controlHist[[length(controlHist)]][['error']]<=control[['epsilonEM']])*(controlHist[[length(controlHist)]][['iteration']]>control[['minIterEM']])*(controlHist[[length(controlHist)]][['count']]+1) + 0
+        
+        # Updating controlHist
+        controlHist[[length(controlHist)+1]] <- controlHist[[length(controlHist)]]
+        
+        # Updating parameter history
+        theta.old <- theta.new
+        
+        #Verbose
+        verbose(level = 2,control = control,controlHist = controlHist,theta = theta.new)
+    }
+    
+    
+    # Verbose
+    verbose(level = 3,control = control)
     
     # Saving viterbi sequence
     invisible(computeViterbiSequence(hdf5 = hdf5File,pi = theta.new$pi,gamma = theta.new$gamma))
