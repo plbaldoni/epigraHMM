@@ -39,14 +39,50 @@ derivNB = function(par,y,x,offset,weights){
 }
 
 ################################################################################
+### Log-likelihood function of a GLM ZINB distribution and its derivative
+################################################################################
+
+glmZINB = function(par,y,x,offset,weights,minZero){
+    mu.vec <- exp(x%*%par[seq_len(ncol(x))]+offset)
+    zeroinfl.vec <- 1/(1+exp(-(x%*%par[(ncol(x)+2):(2*ncol(x)+1)]+offset)))
+    idx.Y0 <- (y==0)
+    
+    return(-sum(weights*(idx.Y0*log(zeroinfl.vec+exp(log(1-zeroinfl.vec)+log(stats::dnbinom(0,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)))+(1-idx.Y0)*(log(1-zeroinfl.vec)+log(stats::dnbinom(y,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)))))
+}
+
+derivZINB = function(par,y,x,offset,weights,minZero){
+    # This function is correct (Checked with grad() from NumDeriv on 11/03/18)
+    mu.vec <- exp(x%*%par[seq_len(ncol(x))]+offset)
+    zeroinfl.vec <- 1/(1+exp(-(x%*%par[(ncol(x)+2):(2*ncol(x)+1)]+offset)))
+    idx.Y0 <- (y==0)
+    
+    l0 = log(stats::dnbinom(0,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)
+    l1 = log(stats::dnbinom(y,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)
+    
+    P0 = zeroinfl.vec+exp(log(1-zeroinfl.vec)+l0)
+    P1 = exp(log(1-zeroinfl.vec)+l1)
+    
+    phi = par[(ncol(x)+1)]
+    aux = (1+phi*mu.vec)
+    
+    return(c(-colSums(as.numeric((idx.Y0)*(weights/P0)*(1-zeroinfl.vec)*(-mu.vec*((1+phi*mu.vec)^(-(1/phi+1)))))*x+as.numeric((1-idx.Y0)*(weights/P1)*(1-zeroinfl.vec)*exp(l1)*(y-mu.vec)/(1+phi*mu.vec))*x),
+             -sum((idx.Y0)*(weights/P0)*(1-zeroinfl.vec)*(aux^(-1/phi))*(log(aux)/((phi)^2)-mu.vec/(phi*aux))+(1-idx.Y0)*(weights/P1)*(1-zeroinfl.vec)*exp(l1)*(log(aux)/(phi^2)-mu.vec*(y+1/phi)/aux-digamma(y+1/phi)/(phi^2)+digamma(1/phi)/(phi^2)+y/phi)),
+             -colSums(as.numeric((idx.Y0)*(weights/P0)*(1-exp(l0))*zeroinfl.vec*(1-zeroinfl.vec))*x+as.numeric((1-idx.Y0)*(weights/P1)*(-exp(l1))*zeroinfl.vec*(1-zeroinfl.vec))*x)))
+}
+
+################################################################################
 ### Invert parameters for glm.nb and glm.zinb
 ################################################################################
 
 invertDispersion = function(par,model){
     if(model=='nb'){return(c(par[seq_len((length(par)-1))],1/par[length(par)]))}
     if(model=='zinb'){
-        n = length(par)
-        return(c(par[seq_len(((n-1)/2))],1/par[(n-1)/2+1],par[seq(from = ((n-1)/2+2),to = n)]))}
+        if(length(par)==3){
+            return(c(par[2],1/par[3],par[1]))
+        } else{
+            return(c(par[3:4],1/par[5],par[1:2]))
+        }
+    }
 }
 
 ################################################################################
@@ -111,7 +147,7 @@ getError <- function(controlHist,parHist,control){
 optimNB <- function(par,y,x,offset,weights,control,dist){
     
     if(dist == 'nb'){
-        tryCatch({assign('model',stats::optim(par=invertDispersion(par,model='nb'),
+        tryCatch({assign('model',stats::optim(par=invertDispersion(par,model=dist),
                                               fn=glmNB,
                                               gr=derivNB,
                                               method='L-BFGS-B',
@@ -120,11 +156,26 @@ optimNB <- function(par,y,x,offset,weights,control,dist){
                                               x = x,
                                               offset = offset,
                                               weights = weights))},
-                 error=function(e){assign('model',list('par' = invertDispersion(par,model='nb'),'convergence' = 99),inherits = TRUE)})
+                 error=function(e){assign('model',list('par' = invertDispersion(par,model=dist),'convergence' = 99),inherits = TRUE)})
         
-        model$par <- invertDispersion(model$par,model='nb')   
+        model$par <- invertDispersion(model$par,model=dist)   
     } else{
-        message('to complete')
+        tryCatch({assign('model',stats::optim(par = invertDispersion(par,model=dist),
+                                              fn = glmZINB,
+                                              gr = derivZINB,
+                                              method = 'L-BFGS-B',
+                                              lower = c(rep(-Inf,ncol(x)),1/control$maxDisp,rep(-Inf,ncol(x))),
+                                              y = y,
+                                              x = x,
+                                              offset = offset,
+                                              weights = weights,
+                                              minZero = control$minZero))},
+                 error=function(e){assign('model',list('par' = invertDispersion(par,model=dist), 'convergence' = 99),inherits = TRUE)})
+        if(ncol(x)==1){
+            model$par <- c(model$par[c(3,1)],1/model$par[2])
+        } else{
+            model$par <- c(model$par[4:5],model$par[1:2],1/model$par[3])
+        }
     }
     
     return(model)
@@ -258,7 +309,7 @@ loglikDifferential = function(dt,delta,psi,N,M,dist,minZero){
             log(delta[b])+rowSums(matrix(dt[,((.SD==1)*stats::dnbinom(ChIP,mu = exp(psi[2]+psi[4]+offsets),size = exp(psi[3]+psi[5]),log = TRUE) + (.SD==0)*dzinb(x = ChIP,mu = exp(psi[2]+offsets),size = exp(psi[3]),zip = exp(psi[1])/(1+exp(psi[1])),minZero = minZero)),.SDcols = paste0('Dsg.Mix',b)],nrow=M,ncol=N,byrow=FALSE))
         })
     }
-
+    
     return(ll)
 }
 
@@ -325,17 +376,20 @@ loglikConsensusHMM = function(dt,theta,N,M,minZero,dist){
     
     if(dist == 'nb'){
         #LL from Background
-        LL[,1] <- rowSums(matrix(dt[,stats::dnbinom(x = ChIP,mu = exp(theta$psi[[1]][1]+ifelse(useControl,theta$psi[[1]][2]*controls,0)+offsets),size = ifelse(useControl,theta$psi[[1]][3],theta$psi[[1]][2]),log=TRUE)],nrow=M,ncol=N,byrow=FALSE))
+        LL[,1] <- rowSums(matrix(dt[,log(stats::dnbinom(x = ChIP,mu = exp(theta$psi[[1]][1]+ifelse(useControl,theta$psi[[1]][2]*controls,0)+offsets),size = ifelse(useControl,theta$psi[[1]][3],theta$psi[[1]][2]),log=FALSE)+minZero)],nrow=M,ncol=N,byrow=FALSE))
         #LL from Enrichment
-        LL[,2] <- rowSums(matrix(dt[,stats::dnbinom(x = ChIP,mu = exp(theta$psi[[2]][1]+ifelse(useControl,theta$psi[[2]][2]*controls,0)+offsets),size = ifelse(useControl,theta$psi[[2]][3],theta$psi[[2]][2]),log=TRUE)],nrow=M,ncol=N,byrow=FALSE))
+        LL[,2] <- rowSums(matrix(dt[,log(stats::dnbinom(x = ChIP,mu = exp(theta$psi[[2]][1]+ifelse(useControl,theta$psi[[2]][2]*controls,0)+offsets),size = ifelse(useControl,theta$psi[[2]][3],theta$psi[[2]][2]),log=FALSE)+minZero)],nrow=M,ncol=N,byrow=FALSE))
     } else{
-        # #LL from Background
-        # LL[,1] = rowSums(matrix(dt[,dzinb(x = ChIP,mu = exp(psi[2]+offsets),size = exp(psi[3]),zip = exp(psi[1])/(1+exp(psi[1])),minZero = minZero)],nrow=M,ncol=N,byrow=FALSE))
-        # #LL from Enrichment
-        # LL[,2] = rowSums(matrix(dt[,stats::dnbinom(x = ChIP,mu = exp(psi[2]+psi[4]+offsets),size = exp(psi[3] + psi[5]),log = TRUE)],nrow=M,ncol=N,byrow=FALSE))
+        #LL from Background
+        LL[,1] = rowSums(matrix(dt[,cbind('zip' = 1/(1+exp(-(ifelse(useControl,theta$psi[[1]][1] + theta$psi[[1]][2]*controls,theta$psi[[1]][1])+offsets))),
+                                          'yvec0' = 1*(ChIP == 0),
+                                          'll00' = log(stats::dnbinom(0,mu = exp(ifelse(useControl,theta$psi[[1]][3] + theta$psi[[1]][4]*controls,theta$psi[[1]][2]) + offsets),size = ifelse(useControl,theta$psi[[1]][5],theta$psi[[1]][3]),log=FALSE)+minZero),
+                                          'll01' = log(stats::dnbinom(ChIP,mu = exp(ifelse(useControl,theta$psi[[1]][3] + theta$psi[[1]][4]*controls,theta$psi[[1]][2]) + offsets),size = ifelse(useControl,theta$psi[[1]][5],theta$psi[[1]][3]),log=FALSE)+minZero),.SD)][,yvec0*log(zip+exp(log(1-zip)+ll00)) + (1-yvec0)*(log(1-zip)+ll01)],nrow=M,ncol=N,byrow=FALSE))
+        
+        #LL from Enrichment
+        LL[,2] = rowSums(matrix(dt[,log(stats::dnbinom(x = ChIP,mu = exp(ifelse(useControl,theta$psi[[2]][1]+theta$psi[[2]][2]*controls,theta$psi[[2]][1])+offsets),size = ifelse(useControl,theta$psi[[2]][3],theta$psi[[2]][2]),log=FALSE)+minZero)],nrow=M,ncol=N,byrow=FALSE))
     }
     
-    LL[is.infinite(LL)] <- log(minZero)
     return(LL)
 }
 
@@ -883,11 +937,11 @@ consensusHMM = function(object,control,dist)
         optimMLE <- lapply(seq_len(length(rcWeights)),function(i){
             optimNB(par = theta.old$psi[[i]],
                     y = rcWeights[[i]][,'ChIP'],
-                    x = rcWeights[[i]][,ifelse('controls' %in% names(dt),c('Intercept','controls'),'Intercept'),drop = FALSE],
+                    x = rcWeights[[i]][,if ('controls' %in% names(dt)) c('Intercept','controls') else 'Intercept',drop = FALSE],
                     offset = rcWeights[[i]][,'offsets'],
                     weights = rcWeights[[i]][,'weights'],
                     control = control,
-                    dist = dist)
+                    dist = ifelse(dist=='zinb' & i==1,'zinb','nb'))
         })
         theta.new[['psi']] <- lapply(optimMLE,function(x){x[['par']]})
         
