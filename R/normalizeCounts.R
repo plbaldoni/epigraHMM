@@ -46,12 +46,7 @@ normalizeCounts <- function(object,control,...){
     if(!is.null(control[['trimOffset']])){offsets <- round(offsets,digits = control[['trimOffset']])}
 
     # Organizing output
-    if('offsets' %in% SummarizedExperiment::assayNames(object)){
-        SummarizedExperiment::assay(object,'offsets') <- SummarizedExperiment::assay(object,'offsets') + offsets
-    } else{
-        dimnames(offsets) <- dimnames(SummarizedExperiment::assay(object,'counts'))
-        SummarizedExperiment::assay(object,'offsets',withDimnames=TRUE) <- offsets
-    }
+    object <- addOffsets(object,offsets)
 
     return(object)
 }
