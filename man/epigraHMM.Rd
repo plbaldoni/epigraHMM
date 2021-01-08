@@ -4,7 +4,7 @@
 \alias{epigraHMM}
 \title{Perform peak calling of epigenomic data sets}
 \usage{
-epigraHMM(object, control, type, dist, random = FALSE)
+epigraHMM(object, control, type, dist)
 }
 \arguments{
 \item{object}{an epigraHMMDataSet}
