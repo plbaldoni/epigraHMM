@@ -3,6 +3,7 @@
 export("%>%")
 export(callPeaks)
 export(controlEM)
+export(epigraHMM)
 export(epigraHMMDataSetFromBam)
 export(epigraHMMDataSetFromMatrix)
 export(initializer)
