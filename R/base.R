@@ -368,7 +368,7 @@ loglikDifferentialHMM = function(dt,theta,N,M,minZero,dist){
 
 loglikConsensusHMM = function(dt,theta,N,M,minZero,dist){
     
-    ChIP = offsets = NULL
+    ChIP = offsets = controls = yvec0 = zip = ll00 = ll01 = NULL
     
     psi <- unlist(theta$psi)
     LL <- matrix(0,nrow=M,ncol=2)
@@ -867,6 +867,8 @@ differentialHMM = function(object,control,dist){
 
 consensusHMM = function(object,control,dist)
 {
+    
+    controls = Group = Intercept = NULL
     
     # Creating subdirectories
     hdf5File <- checkPath(file.path(path.expand(control[['tempDir']]),paste0(control[['fileName']],'.h5')))
