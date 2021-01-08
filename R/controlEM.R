@@ -16,9 +16,6 @@
 #' @param maxIterInnerEM a positive integer giving the maximum number of inner EM iterations. Default is 5.
 #' @param epsilonInnerEM a positive value with the convergence tolerance value for the inner EM algorithm. The criterion for the inner EM is "MRCPE". Default is 1e-4.
 #' @param trimOffset either NULL or a positive integer indicating the number of decimal places to be used in the offset. Default is 3.
-#' @param random either 'intercept' or 'slope'. It specifies the type of random effects model for consensus peak calling. Default is 'intercept'.
-#' @param maxSigma2 a positive value for the maximum positive value of the variance component allowed in computations. Default is 10.
-#' @param minSigma2 a positive value for the minimum positive value of the variance component allowed in computations. Default is 1e-8.
 #' @param pattern either NULL (the default) or a list with length equal to the number of differential patterns to be modeled by the differential HMM state. See Details section below.
 #' @param tempDir a string where results will be saved. Default is `tempdir()`.
 #' @param fileName a string with the name of the result files. Default is `epigraHMM`.
@@ -50,9 +47,6 @@ controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6),
                      maxIterInnerEM = 5,
                      epsilonInnerEM = 1e-4,
                      trimOffset = 3,
-                     random='intercept',
-                     maxSigma2 = 10,
-                     minSigma2 = 1e-8,
                      pattern = NULL,
                      tempDir = tempdir(),
                      fileName = 'epigraHMM') {
@@ -115,18 +109,6 @@ controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6),
     
     if (!(length(epsilonInnerEM)==1 & is.numeric(epsilonInnerEM) & epsilonInnerEM>0)){stop("'epsilonInnerEM' must be a positive value")}
     
-    # Checks for minSigma2
-    
-    if (!(length(minSigma2)==1 & is.numeric(minSigma2) & minSigma2>0 & minSigma2 < maxSigma2)){stop("'minSigma2' must be a positive value")}
-    
-    # Checks for maxSigma2
-    
-    if (!(length(maxSigma2)==1 & is.numeric(maxSigma2) & maxSigma2>0 & maxSigma2 > minSigma2)){stop("'maxSigma2' must be a positive value")}
-    
-    # Checks for random
-    
-    if (!(random %in% c('intercept','slope'))){stop("random should be 'intercept' or 'slope'.")}
-    
     # Checks for trimOffset
     
     if (!is.null(trimOffset)){if (!trimOffset%%1==0 || trimOffset <= 0){stop("value of 'trimOffset' must be a positive integer")}}
@@ -154,9 +136,6 @@ controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6),
          maxIterInnerEM=maxIterInnerEM,
          epsilonInnerEM=epsilonInnerEM,
          trimOffset=trimOffset,
-         random = random,
-         maxSigma2 = maxSigma2,
-         minSigma2 = minSigma2,
          pattern = pattern,
          tempDir = tempDir,
          fileName = fileName)

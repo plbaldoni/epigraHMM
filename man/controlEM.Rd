@@ -18,9 +18,6 @@ controlEM(
   maxIterInnerEM = 5,
   epsilonInnerEM = 1e-04,
   trimOffset = 3,
-  random = "intercept",
-  maxSigma2 = 10,
-  minSigma2 = 1e-08,
   pattern = NULL,
   tempDir = tempdir(),
   fileName = "epigraHMM"
@@ -53,12 +50,6 @@ controlEM(
 \item{epsilonInnerEM}{a positive value with the convergence tolerance value for the inner EM algorithm. The criterion for the inner EM is "MRCPE". Default is 1e-4.}
 
 \item{trimOffset}{either NULL or a positive integer indicating the number of decimal places to be used in the offset. Default is 3.}
-
-\item{random}{either 'intercept' or 'slope'. It specifies the type of random effects model for consensus peak calling. Default is 'intercept'.}
-
-\item{maxSigma2}{a positive value for the maximum positive value of the variance component allowed in computations. Default is 10.}
-
-\item{minSigma2}{a positive value for the minimum positive value of the variance component allowed in computations. Default is 1e-8.}
 
 \item{pattern}{either NULL (the default) or a list with length equal to the number of differential patterns to be modeled by the differential HMM state. See Details section below.}
 
