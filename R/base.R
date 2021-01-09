@@ -665,7 +665,7 @@ initializerHMM = function(object,control){
         # E-step
         expStep(pi = theta.old[['pi']],
                 gamma = theta.old[['gamma']],
-                logf = do.call(cbind,lapply(1:2,function(x){stats::dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]+assay(object,'offsets')),size = theta.old[['psi']][[x]][2],log = TRUE)})),
+                logf = do.call(cbind,lapply(1:2,function(x){stats::dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]+as.numeric(assay(object,'offsets'))),size = theta.old[['psi']][[x]][2],log = TRUE)})),
                 hdf5 = hdf5File)
         
         # M-step
