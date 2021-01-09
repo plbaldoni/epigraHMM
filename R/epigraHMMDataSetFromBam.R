@@ -178,6 +178,8 @@ epigraHMMDataSetFromBam <- function(bamFiles,
                                                                    rowRanges = gr.genome,
                                                                    colData = colData)
     
+    # Adding offsets
+    epigraHMMDataSet <- addOffsets(epigraHMMDataSet,Matrix::Matrix(0,nrow = nrow(epigraHMMDataSet),ncol = ncol(epigraHMMDataSet),sparse = TRUE))
     
     # If there are controls, repeat
     if(is.list(bamFiles)){

@@ -98,6 +98,10 @@ epigraHMMDataSetFromMatrix <- function(countData,colData,rowRanges = NULL){
 
     epigraHMMDataSet <- SummarizedExperiment::SummarizedExperiment(assays = list(counts = matrix(countData[['counts']],byrow = FALSE,nrow = nrow(countData[['counts']]),ncol = ncol(countData[['counts']]),dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))),colData = colData)
 
+    # Adding offsets
+    
+    epigraHMMDataSet <- addOffsets(epigraHMMDataSet,Matrix::Matrix(0,nrow = nrow(epigraHMMDataSet),ncol = ncol(epigraHMMDataSet),sparse = TRUE))
+    
     # Adding rowRanges
 
     if(!is.null(rowRanges)){
@@ -112,7 +116,7 @@ epigraHMMDataSetFromMatrix <- function(countData,colData,rowRanges = NULL){
             SummarizedExperiment::assay(epigraHMMDataSet,idx) <- countData[[idx]]
         }
     }
-
+    
     # Sorting the object
 
     if(!all(base::order(SummarizedExperiment::colData(epigraHMMDataSet)[,c('condition','replicate')],decreasing = F)==seq_len(nrow(SummarizedExperiment::colData(epigraHMMDataSet))))){
