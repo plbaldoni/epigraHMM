@@ -5,6 +5,10 @@ aggregate <- function(x, f) {
     .Call(`_epigraHMM_aggregate`, x, f)
 }
 
+computeBIC <- function(hdf5, numPar, numSamples) {
+    .Call(`_epigraHMM_computeBIC`, hdf5, numPar, numSamples)
+}
+
 computeQFunction <- function(hdf5, pi, gamma) {
     .Call(`_epigraHMM_computeQFunction`, hdf5, pi, gamma)
 }

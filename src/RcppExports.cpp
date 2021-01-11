@@ -18,6 +18,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// computeBIC
+double computeBIC(Rcpp::StringVector hdf5, int numPar, int numSamples);
+RcppExport SEXP _epigraHMM_computeBIC(SEXP hdf5SEXP, SEXP numParSEXP, SEXP numSamplesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Rcpp::StringVector >::type hdf5(hdf5SEXP);
+    Rcpp::traits::input_parameter< int >::type numPar(numParSEXP);
+    Rcpp::traits::input_parameter< int >::type numSamples(numSamplesSEXP);
+    rcpp_result_gen = Rcpp::wrap(computeBIC(hdf5, numPar, numSamples));
+    return rcpp_result_gen;
+END_RCPP
+}
 // computeQFunction
 double computeQFunction(Rcpp::StringVector hdf5, arma::vec pi, arma::mat gamma);
 RcppExport SEXP _epigraHMM_computeQFunction(SEXP hdf5SEXP, SEXP piSEXP, SEXP gammaSEXP) {
@@ -155,6 +168,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_epigraHMM_aggregate", (DL_FUNC) &_epigraHMM_aggregate, 2},
+    {"_epigraHMM_computeBIC", (DL_FUNC) &_epigraHMM_computeBIC, 3},
     {"_epigraHMM_computeQFunction", (DL_FUNC) &_epigraHMM_computeQFunction, 3},
     {"_epigraHMM_computeViterbiSequence", (DL_FUNC) &_epigraHMM_computeViterbiSequence, 3},
     {"_epigraHMM_consensusRejectionControlled", (DL_FUNC) &_epigraHMM_consensusRejectionControlled, 3},
