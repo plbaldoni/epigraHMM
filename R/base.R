@@ -90,13 +90,16 @@ invertDispersion = function(par,model){
 ################################################################################
 
 verbose = function(level,control,controlHist = NULL,theta = NULL){
+    currentTime <- Sys.time()
     if(!control[['quiet']]){
         if(level == 1){
-            message(paste0(c(rep('#',80))));message(Sys.time());message("Starting the EM algorithm")
+            message(paste0(c(rep('#',80))));message(currentTime);message("Starting the EM algorithm")
+            return(currentTime)
         }
         if(level == 2){
             message(paste0(c(rep('#',80))))
             message('\rIteration: ',controlHist[[length(controlHist)]][['iteration']])
+            message('\rBIC: ',formatC(controlHist[[length(controlHist)]][['bic']], format = "e", digits = 2))
             message("\rError: ",paste(paste(names(controlHist[[length(controlHist)]][['error']]),'='),formatC(controlHist[[length(controlHist)]][['error']], format = "e", digits = 2),collapse = ', '))
             message("\rConvergence: ",paste(paste(names(controlHist[[length(controlHist)]][['count']]),'='),controlHist[[length(controlHist)]][['count']],collapse = ', '))
             message("\r",paste('Initial probabilities: '),paste(formatC(theta[['pi']], format = "e", digits = 2),collapse = ' '))
@@ -105,11 +108,12 @@ verbose = function(level,control,controlHist = NULL,theta = NULL){
                 message("\r",paste('Mixture probabilities: '),paste(formatC(unlist(theta[['delta']]), format = "e", digits = 2),collapse = ' '))
             }
             message("\r",paste('Model coefficients: '),paste(formatC(unlist(theta[['psi']]), format = "e", digits = 2),collapse = ' '))
+            message("\rTime ellapsed (mins): ",formatC(controlHist[[length(controlHist)]][['time']], format = "f", digits = 2))
         }
         if(level == 3){
             message(paste0(c(rep('#',80))))
             message("EM algorithm converged!")
-            message(Sys.time())
+            message(currentTime)
             message(paste0(c(rep('#',80))))
         }   
     }
@@ -554,14 +558,18 @@ optimDifferential <- function(par,rcWeights,control,dist){
 ### Create control list to track EM algorithm
 ################################################################################
 
-controlList <- function(iteration = 0,
+controlList <- function(time = 0,
+                        iteration = 0,
                         convergence = 0,
+                        bic = 0,
                         q = 0,
                         MRCPE = c('error' = 0,'count' = 0),
                         MACPE = c('error' = 0,'count' = 0),
                         ARCEL = c('error' = 0,'count' = 0)){
-    return(list('iteration' = iteration,
+    return(list('time' = time,
+                'iteration' = iteration,
                 'convergence' = convergence,
+                'bic' = bic,
                 'q' = q,
                 'error' = c('MRCPE' = MRCPE[['error']], 'MACPE' = MACPE[['error']], 'ARCEL' = ARCEL[['error']]),
                 'count' = c('MRCPE' = MRCPE[['count']], 'MACPE' = MACPE[['count']], 'ARCEL' = ARCEL[['count']])))
@@ -655,7 +663,7 @@ initializerHMM = function(object,control){
     
     # EM algorithm begins
     ## Verbose
-    verbose(level = 1,control = control)
+    init.time <- verbose(level = 1,control = control)
     
     while(checkConvergence(controlHist,control)<control[['maxCountEM']] & controlHist[[length(controlHist)]][['iteration']]<control[['maxIterEM']]){
         
@@ -695,6 +703,8 @@ initializerHMM = function(object,control){
         
         # Checking convergence
         ## Q-function (evaluated on the old parameters to avoid calculating the log-likelihood again)
+        controlHist[[length(controlHist)]][['time']] <- difftime(time1 = Sys.time(),time2 = init.time,units = 'mins') 
+        controlHist[[length(controlHist)]][['bic']] <- computeBIC(hdf5 = hdf5File,numPar = length(unlist(theta.old)),numSamples = ncol(object))
         controlHist[[length(controlHist)]][['q']] <- computeQFunction(hdf5 = hdf5File,pi = theta.old[['pi']],gamma = theta.old[['gamma']])
         controlHist[[length(controlHist)]][['convergence']] <-  1*any(!unname(unlist(lapply(optimMLE,function(x){x[['convergence']]}))) == 0)
         controlHist[[length(controlHist)]][['error']] <- getError(controlHist = controlHist,parHist = parHist,control = control)
@@ -769,7 +779,7 @@ differentialHMM = function(object,control,dist){
     
     # EM algorithm begins
     ## Verbose
-    verbose(level = 1,control = control)
+    init.time <- verbose(level = 1,control = control)
     
     while(checkConvergence(controlHist,control)<control[['maxCountEM']] & controlHist[[length(controlHist)]][['iteration']]<control[['maxIterEM']]){
         
@@ -826,6 +836,8 @@ differentialHMM = function(object,control,dist){
         
         # Updating controlHist
         ## Q-function (evaluated on the old parameters to avoid calculating the log-likelihood again)
+        controlHist[[length(controlHist)]][['time']] <- difftime(time1 = Sys.time(),time2 = init.time,units = 'mins') 
+        controlHist[[length(controlHist)]][['bic']] <- computeBIC(hdf5 = hdf5File,numPar = length(unlist(theta.old)),numSamples = ncol(object))
         controlHist[[length(controlHist)]][['q']] <- computeQFunction(hdf5 = hdf5File,pi = theta.old[['pi']],gamma = theta.old[['gamma']])
         controlHist[[length(controlHist)]][['convergence']] <- optimMLE$convergence
         controlHist[[length(controlHist)]][['error']] <- getError(controlHist = controlHist,parHist = parHist,control = control)
@@ -912,7 +924,7 @@ consensusHMM = function(object,control,dist)
     
     # EM algorithm begins
     ## Verbose
-    verbose(level = 1,control = control)
+    init.time <- verbose(level = 1,control = control)
     
     while(checkConvergence(controlHist,control)<control[['maxCountEM']] & controlHist[[length(controlHist)]][['iteration']]<control[['maxIterEM']]){
         
@@ -952,6 +964,8 @@ consensusHMM = function(object,control,dist)
         
         # Checking convergence
         ## Q-function (evaluated on the old parameters to avoid calculating the log-likelihood again)
+        controlHist[[length(controlHist)]][['time']] <- difftime(time1 = Sys.time(),time2 = init.time,units = 'mins') 
+        controlHist[[length(controlHist)]][['bic']] <- computeBIC(hdf5 = hdf5File,numPar = length(unlist(theta.old)),numSamples = ncol(object))
         controlHist[[length(controlHist)]][['q']] <- computeQFunction(hdf5 = hdf5File,pi = theta.old[['pi']],gamma = theta.old[['gamma']])
         controlHist[[length(controlHist)]][['convergence']] <-  1*any(!unname(unlist(lapply(optimMLE,function(x){x[['convergence']]}))) == 0)
         controlHist[[length(controlHist)]][['error']] <- getError(controlHist = controlHist,parHist = parHist,control = control)
