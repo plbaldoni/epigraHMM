@@ -14,7 +14,7 @@ controlEM(
   criterion = "all",
   minZero = .Machine$double.xmin,
   probCut = 0.05,
-  quiet = TRUE,
+  quiet = FALSE,
   maxIterInnerEM = 5,
   epsilonInnerEM = 1e-04,
   trimOffset = 3,
