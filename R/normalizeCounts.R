@@ -35,7 +35,7 @@ normalizeCounts <- function(object,control,...){
     } else{
         logSample <- log1p(SummarizedExperiment::assay(object,'counts'))
     }
-    logReference <- rowMeans(logSample)
+    logReference <- Matrix::rowMeans(logSample)
 
     # Creating offsets
     offsets <- do.call(cbind,lapply(seq_len(ncol(SummarizedExperiment::assay(object,'counts'))),function(x){
