@@ -110,7 +110,7 @@ epigraHMMDataSetFromBam <- function(bamFiles,
         if(!(is.character(bamFiles) & length(bamFiles)==nrow(colData) & all(file.exists(bamFiles)) & all(file.exists(paste0(bamFiles,'.bai'))))){
             stop("bamFiles is not a proper argument, check the help manual.")
         } else{
-            names(bamFiles) <- 'counts'
+            bamFiles <- list('counts' = bamFiles)
         }
     }
     
@@ -182,7 +182,7 @@ epigraHMMDataSetFromBam <- function(bamFiles,
     epigraHMMDataSet <- addOffsets(epigraHMMDataSet,Matrix::Matrix(0,nrow = nrow(epigraHMMDataSet),ncol = ncol(epigraHMMDataSet),sparse = TRUE))
     
     # If there are controls, repeat
-    if(is.list(bamFiles)){
+    if(!length(names(bamFiles)[-which(names(bamFiles)=='counts')]) == 0){
         for(idx in names(bamFiles)[-which(names(bamFiles)=='counts')]){
             tmp <- do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){return(bamsignals::bamCount(bampath = bamFiles[[idx]][x],gr = gr.genome,verbose = FALSE))}))
             dimnames(tmp) <- dimnames(SummarizedExperiment::assay(epigraHMMDataSet,'counts'))
