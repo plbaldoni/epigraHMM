@@ -60,6 +60,8 @@ epigraHMMDataSetFromMatrix <- function(countData,colData,rowRanges = NULL){
         if(!(all(unlist(lapply(countData,is.matrix))) & !is.null(names(countData)) & (nrow(unique(do.call(rbind,lapply(countData,dim)))) == 1) & ('counts' %in% names(countData)))){
             stop("countData is not a proper argument, check the help manual.")
         }
+    } else{
+        countData <- list('counts' = countData)
     }
 
     # Checking rowRanges
