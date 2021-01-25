@@ -34,7 +34,7 @@
 #' control <- controlEM(maxIterEM = 100)
 #'
 #' @export
-controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6),
+controlEM = function(epsilonEM=c('MRCPE' = 1e-3, 'MACPE' = 1e-3,'ARCEL' = 1e-3),
                      maxIterEM=500,
                      minIterEM=3,
                      gapIterEM=3,
@@ -44,8 +44,8 @@ controlEM = function(epsilonEM=c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6),
                      minZero=.Machine$double.xmin,
                      probCut=0.05,
                      quiet=FALSE,
-                     maxIterInnerEM = 5,
-                     epsilonInnerEM = 1e-4,
+                     maxIterInnerEM = 3,
+                     epsilonInnerEM = 1e-3,
                      trimOffset = 3,
                      pattern = NULL,
                      tempDir = tempdir(),
