@@ -2,7 +2,7 @@
 #'
 #' This function passes controlling parameters for the EM algorithm implemented in the epigraHMM package.
 #'
-#' @param epsilonEM a named vector of positive values specifying up to four possible convergence criterion tolerances for the EM algorithm (see 'criterion' below). Default is c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6).
+#' @param epsilonEM a named vector of positive values specifying up to four possible convergence criterion tolerances for the EM algorithm (see 'criterion' below). Default is c('MRCPE' = 1e-3, 'MACPE' = 1e-3,'ARCEL' = 1e-3).
 #' @param maxIterEM a positive integer giving the maximum number of EM iterations. Default is 500.
 #' @param minIterEM a positive integer giving the minimum number of EM iterations to start evaluating the convergence. Default is 3.
 #' @param gapIterEM a positive integer giving the number of EM iterations apart to compute the convergence criterion. Default is 3.
@@ -14,7 +14,7 @@
 #' @param probCut a number between 0 and 1 for the cutoff of the rejection controlled EM algorithm. Default 0.05.
 #' @param quiet a logical indicating whether to print messages. Default is TRUE.
 #' @param maxIterInnerEM a positive integer giving the maximum number of inner EM iterations. Default is 5.
-#' @param epsilonInnerEM a positive value with the convergence tolerance value for the inner EM algorithm. The criterion for the inner EM is "MRCPE". Default is 1e-4.
+#' @param epsilonInnerEM a positive value with the convergence tolerance value for the inner EM algorithm. The criterion for the inner EM is "MRCPE". Default is 1e-3.
 #' @param trimOffset either NULL or a positive integer indicating the number of decimal places to be used in the offset. Default is 3.
 #' @param pattern either NULL (the default) or a list with length equal to the number of differential patterns to be modeled by the differential HMM state. See Details section below.
 #' @param tempDir a string where results will be saved. Default is `tempdir()`.
@@ -44,7 +44,7 @@ controlEM = function(epsilonEM=c('MRCPE' = 1e-3, 'MACPE' = 1e-3,'ARCEL' = 1e-3),
                      minZero=.Machine$double.xmin,
                      probCut=0.05,
                      quiet=FALSE,
-                     maxIterInnerEM = 3,
+                     maxIterInnerEM = 5,
                      epsilonInnerEM = 1e-3,
                      trimOffset = 3,
                      pattern = NULL,
