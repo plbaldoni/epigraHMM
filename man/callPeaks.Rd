@@ -4,17 +4,20 @@
 \alias{callPeaks}
 \title{Summarize peak calls and optionally create a BED 6+3 file in broadPeak format for visualization}
 \usage{
-callPeaks(object, control, method = "viterbi", saveToFile = FALSE)
+callPeaks(object, hdf5, method = "viterbi", saveToFile = FALSE, control = NULL)
 }
 \arguments{
 \item{object}{an epigraHMMDataSet}
 
-\item{control}{list of control arguments from controlEM()}
+\item{hdf5}{a character with the location of the epigraHMM HDF5 output file}
 
 \item{method}{either 'viterbi' or a numeric FDR control threshold (e.g. 0.05). Default is 'viterbi'.}
 
 \item{saveToFile}{a logical indicating whether or not to save the results to file.
 Output files are always saved with peaks of interest defined on the region level. Default is FALSE.}
+
+\item{control}{list of control arguments from controlEM(). This is an optional parameter and it is
+only required when `saveToFile = TRUE` so that the output directory can be obtained. Default is NULL.}
 }
 \value{
 A GRanges object with differential peak calls in BED 6+3 format
