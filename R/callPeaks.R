@@ -4,10 +4,12 @@
 #' peaks (consensus or differential) for a given FDR control threshold or Viterbi sequence.
 #'
 #' @param object an epigraHMMDataSet
-#' @param control list of control arguments from controlEM()
+#' @param hdf5 a character with the location of the epigraHMM HDF5 output file
 #' @param method either 'viterbi' or a numeric FDR control threshold (e.g. 0.05). Default is 'viterbi'.
 #' @param saveToFile a logical indicating whether or not to save the results to file.
 #' Output files are always saved with peaks of interest defined on the region level. Default is FALSE.
+#' @param control list of control arguments from controlEM(). This is an optional parameter and it is
+#' only required when `saveToFile = TRUE` so that the output directory can be obtained. Default is NULL.
 #'
 #' @return A GRanges object with differential peak calls in BED 6+3 format
 #'
@@ -23,16 +25,17 @@
 #'
 #' @export
 callPeaks = function(object,
-                     control,
+                     hdf5,
                      method = 'viterbi',
-                     saveToFile = FALSE)
+                     saveToFile = FALSE,
+                     control = NULL)
 {
     subjectHits = i = NULL
 
     # Calling peaks
-    prob <- exp(rhdf5::h5read(S4Vectors::metadata(object)$output,'logProb1')[,2])
+    prob <- exp(rhdf5::h5read(hdf5,'logProb1')[,2])
     if(method=='viterbi'){
-        peakindex <- (rhdf5::h5read(S4Vectors::metadata(object)$output,'viterbi')[,1]==1)
+        peakindex <- (rhdf5::h5read(hdf5,'viterbi')[,1]==1)
     } else{
         if(is.numeric(method) & method>0 & method<1){
             peakindex <- fdrControl(prob = prob,fdr = method)
@@ -99,7 +102,7 @@ callPeaks = function(object,
         # Writing bedGraph files for mixture probabilities
         if(length(unique((colData(object)[['condition']])))>1){
 
-            mixProbSet <- rhdf5::h5read(S4Vectors::metadata(object)$output,'mixturePatterns')
+            mixProbSet <- rhdf5::h5read(hdf5,'mixturePatterns')
             filenames <- c(filenames,sapply(file.path(path.expand(control[['tempDir']]),paste0(control[['fileName']],'_',paste0('mixProb_',mixProbSet,'.wig'))),checkPath,USE.NAMES = FALSE))
             names(filenames)[names(filenames)==""] <- mixProbSet
 
@@ -107,7 +110,7 @@ callPeaks = function(object,
 
                 dt.bedgraph = data.frame(chrom=SummarizedExperiment::seqnames(gr.graph),chromStart=SummarizedExperiment::start(gr.graph),
                                          chromEnd=SummarizedExperiment::end(gr.graph),
-                                         mixProb=rhdf5::h5read(S4Vectors::metadata(object)$output,'mixtureProb')[peakindex,i])
+                                         mixProb=rhdf5::h5read(hdf5,'mixtureProb')[peakindex,i])
 
                 utils::write.table(dt.bedgraph,file=file.path(control[['tempDir']],"temp.bed"),row.names = FALSE,col.names = FALSE,quote = FALSE,sep="\t")
                 header1 = paste0('track type=bedGraph name="epigraHMM(mixProb:',mixProbSet[i],')" description="','Probability','" visibility=full maxHeightPixels=128:32:11 graphType=bar autoScale=off alwaysZero=on viewLimits=0.0:1.0')
