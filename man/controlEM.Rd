@@ -5,7 +5,7 @@
 \title{Control parameters for the EM algorithm from epigraHMM}
 \usage{
 controlEM(
-  epsilonEM = c(MRCPE = 1e-04, MACPE = 1e-04, ARCEL = 1e-06),
+  epsilonEM = c(MRCPE = 0.001, MACPE = 0.001, ARCEL = 0.001),
   maxIterEM = 500,
   minIterEM = 3,
   gapIterEM = 3,
@@ -16,7 +16,7 @@ controlEM(
   probCut = 0.05,
   quiet = FALSE,
   maxIterInnerEM = 5,
-  epsilonInnerEM = 1e-04,
+  epsilonInnerEM = 0.001,
   trimOffset = 3,
   pattern = NULL,
   tempDir = tempdir(),
@@ -24,7 +24,7 @@ controlEM(
 )
 }
 \arguments{
-\item{epsilonEM}{a named vector of positive values specifying up to four possible convergence criterion tolerances for the EM algorithm (see 'criterion' below). Default is c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6).}
+\item{epsilonEM}{a named vector of positive values specifying up to four possible convergence criterion tolerances for the EM algorithm (see 'criterion' below). Default is c('MRCPE' = 1e-3, 'MACPE' = 1e-3,'ARCEL' = 1e-3).}
 
 \item{maxIterEM}{a positive integer giving the maximum number of EM iterations. Default is 500.}
 
@@ -47,7 +47,7 @@ controlEM(
 
 \item{maxIterInnerEM}{a positive integer giving the maximum number of inner EM iterations. Default is 5.}
 
-\item{epsilonInnerEM}{a positive value with the convergence tolerance value for the inner EM algorithm. The criterion for the inner EM is "MRCPE". Default is 1e-4.}
+\item{epsilonInnerEM}{a positive value with the convergence tolerance value for the inner EM algorithm. The criterion for the inner EM is "MRCPE". Default is 1e-3.}
 
 \item{trimOffset}{either NULL or a positive integer indicating the number of decimal places to be used in the offset. Default is 3.}
 
