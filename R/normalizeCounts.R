@@ -24,6 +24,8 @@
 #'
 #' @export
 normalizeCounts <- function(object,control,...){
+    
+    weights = minus = average = NULL
 
     # Checking input
     if (!(methods::is(object)[1]=='RangedSummarizedExperiment')){
@@ -45,7 +47,7 @@ normalizeCounts <- function(object,control,...){
                              average = (logSample[,x] + logReference)/2,
                              weights = 1)
         
-        dt_reduced <- dt_all[,.(weights = sum(weights)),by = c('minus','average')][,offsets := limma::loessFit(y=minus,x=average,weights=weights,min.weight = 0,max.weight = Inf,...)$fitted]
+        dt_reduced <- dt_all[,list(weights = sum(weights)),by = c('minus','average')][,offsets := limma::loessFit(y=minus,x=average,weights=weights,min.weight = 0,max.weight = Inf,...)$fitted]
         
         dt_all <- merge(dt_all,dt_reduced[,c('minus','average','offsets')],by = c('minus','average'),all.x = TRUE, sort = FALSE)
         
