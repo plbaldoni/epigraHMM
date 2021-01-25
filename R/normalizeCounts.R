@@ -20,6 +20,7 @@
 #' @importFrom methods is
 #' @importFrom SummarizedExperiment assayNames assay
 #' @importFrom limma loessFit
+#' @importFrom data.table data.table
 #'
 #' @export
 normalizeCounts <- function(object,control,...){
@@ -39,7 +40,16 @@ normalizeCounts <- function(object,control,...){
 
     # Creating offsets
     offsets <- do.call(cbind,lapply(seq_len(ncol(SummarizedExperiment::assay(object,'counts'))),function(x){
-        return(limma::loessFit(y=(logSample[,x] - logReference),x=(logSample[,x] + logReference)/2,...)$fitted)
+        
+        dt_all <- data.table::data.table(minus = (logSample[,x] - logReference),
+                             average = (logSample[,x] + logReference)/2,
+                             weights = 1)
+        
+        dt_reduced <- dt_all[,.(weights = sum(weights)),by = c('minus','average')][,offsets := limma::loessFit(y=minus,x=average,weights=weights,min.weight = 0,max.weight = Inf,...)$fitted]
+        
+        dt_all <- merge(dt_all,dt_reduced[,c('minus','average','offsets')],by = c('minus','average'),all.x = TRUE, sort = FALSE)
+        
+        return(dt_all$offsets)
     }))
     
     # Trimming offsets
