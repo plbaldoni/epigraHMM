@@ -268,7 +268,7 @@ estimateCoefficients <- function(z,dt,dist,type){
     Window = ChIP = offsets = mu = sigma2 = NULL
     
     parList <- lapply(range(z),function(x){
-        subpar <- dt[Window %in% which(z == x),list(mu = mean(ChIP/exp(offsets)),sigma2 = stats::var(ChIP/exp(offsets)))]
+        subpar <- dt[Window %in% which(z == x),list(mu = mean((ChIP+1)/exp(offsets)),sigma2 = stats::var((ChIP+1)/exp(offsets)))]
         subpar[,c(zip = (sigma2-mu)/(sigma2+mu^2-mu),mu = mu,disp = (mu^2)/(sigma2-mu))]
     })
     
@@ -656,7 +656,7 @@ initializerHMM = function(object,control){
     theta.old[['pi']] <- c(0.999,0.001)
     theta.old[['gamma']] <- estimateTransitionProb(chain = z,numStates = K)
     theta.old[['psi']] <- lapply(1:2,function(x){
-        muvar <- dt[which(z == x),list(mu = mean(ChIP/exp(offsets)),sigma2 = stats::var(ChIP/exp(offsets)))]
+        muvar <- dt[which(z == x),list(mu = mean((ChIP+1)/exp(offsets)),sigma2 = stats::var((ChIP+1)/exp(offsets)))]
         muvar[,c(log(mu),min((mu^2)/max(0,sigma2-mu),control[['maxDisp']]))]
     })
     rm(z,score)
