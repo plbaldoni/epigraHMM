@@ -264,12 +264,12 @@ estimateMixtureProb = function(zDifferential,zSeq,B){
 ### Estimate model coefficients for differential model initialization
 ################################################################################
 
-estimateCoefficients <- function(z,dt,dist,type){
+estimateCoefficients <- function(z,dt,dist,type,control){
     Window = ChIP = offsets = mu = sigma2 = NULL
     
     parList <- lapply(range(z),function(x){
         subpar <- dt[Window %in% which(z == x),list(mu = mean((ChIP+1)/exp(offsets)),sigma2 = stats::var((ChIP+1)/exp(offsets)))]
-        subpar[,c(zip = (sigma2-mu)/(sigma2+mu^2-mu),mu = mu,disp = (mu^2)/(sigma2-mu))]
+        subpar[,c(zip = (sigma2-mu)/(sigma2+mu^2-mu),mu = mu,disp = min((mu^2)/max(0,sigma2-mu),control[['maxDisp']]))]
     })
     
     par <- list()
@@ -775,7 +775,7 @@ differentialHMM = function(object,control,dist){
     theta.old[['delta']] <- estimateMixtureProb(zDifferential = zPatterns$group$Group[!(zPatterns$group$Group%in%c(1,max(zPatterns$group$Group)))],
                                                 zSeq = zMixtures$zSeq,
                                                 B = zMixtures$B)
-    theta.old[['psi']] <- estimateCoefficients(z = zPatterns$group$Group,dt = dt,dist = dist,type = 'differential')
+    theta.old[['psi']] <- estimateCoefficients(z = zPatterns$group$Group,dt = dt,dist = dist,type = 'differential',control = control)
     
     # EM algorithm begins
     ## Verbose
@@ -807,7 +807,7 @@ differentialHMM = function(object,control,dist){
         
         while(count.innerem<control[['maxIterInnerEM']] & error.innerem>control[['epsilonInnerEM']]){
             #### Inner EM: E-step
-            innerExpStep(dt = dt,theta = theta.tmp.old,N = N,M = M,model = 'nb',hdf5 = hdf5File,minZero = control[['minZero']],dist = dist)
+            suppressMessages(innerExpStep(dt = dt,theta = theta.tmp.old,N = N,M = M,model = 'nb',hdf5 = hdf5File,minZero = control[['minZero']],dist = dist))
             
             #### Inner EM: M-step
             ##### Mixing probability
@@ -920,7 +920,7 @@ consensusHMM = function(object,control,dist)
     # Parameter initializations
     theta.old[['pi']] <- c(0.999,0.001)
     theta.old[['gamma']] <- estimateTransitionProb(chain = zPatterns$group$Group,numStates = K)
-    theta.old[['psi']] <- estimateCoefficients(z = zPatterns$group$Group,dt = dt,dist = dist,type = 'consensus')
+    theta.old[['psi']] <- estimateCoefficients(z = zPatterns$group$Group,dt = dt,dist = dist,type = 'consensus',control = control)
     
     # EM algorithm begins
     ## Verbose
