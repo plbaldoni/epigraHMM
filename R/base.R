@@ -607,7 +607,7 @@ checkConvergence <- function(controlHist,control){
 ################################################################################
 
 fdrControl <- function(prob,fdr = 0.05){
-    if(!all(prob>0 & prob<1)){stop('Posterior probabilities must be between 0 and 1')}
+    if(!all(prob>=0 & prob<=1)){stop('Posterior probabilities must be between 0 and 1')}
     if(!(fdr>0 & fdr <1)){stop('fdr must be between 0 and 1')}
     
     notpp = FDR = Window = NULL
