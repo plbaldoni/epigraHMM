@@ -584,7 +584,7 @@ checkPath = function(path){
     i <- 1
     splitPath <- strsplit(path,"\\.")[[1]]
     repeat {
-        f = paste0(splitPath[1],i,".",splitPath[2])
+        f = paste0(paste(splitPath[seq_len(length(splitPath))-1],collapse = ''),i,".",splitPath[length(splitPath)])
         if(!file.exists(f)){return(f)}
         i <- i + 1
     }
