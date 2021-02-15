@@ -108,7 +108,7 @@ verbose = function(level,control,controlHist = NULL,theta = NULL){
                 message("\r",paste('Mixture probabilities: '),paste(formatC(unlist(theta[['delta']]), format = "e", digits = 2),collapse = ' '))
             }
             message("\r",paste('Model coefficients: '),paste(formatC(unlist(theta[['psi']]), format = "e", digits = 2),collapse = ' '))
-            message("\rTime ellapsed (mins): ",formatC(controlHist[[length(controlHist)]][['time']], format = "f", digits = 2))
+            message("\rTime elapsed (mins): ",formatC(controlHist[[length(controlHist)]][['time']], format = "f", digits = 2))
         }
         if(level == 3){
             message(paste0(c(rep('#',80))))
@@ -704,7 +704,9 @@ initializerHMM = function(object,control){
         # Checking convergence
         ## Q-function (evaluated on the old parameters to avoid calculating the log-likelihood again)
         controlHist[[length(controlHist)]][['time']] <- difftime(time1 = Sys.time(),time2 = init.time,units = 'mins') 
-        controlHist[[length(controlHist)]][['bic']] <- computeBIC(hdf5 = hdf5File,numPar = length(unlist(theta.old)),numSamples = ncol(object))
+        controlHist[[length(controlHist)]][['bic']] <- computeBIC(hdf5 = hdf5File,
+                                                                  numPar = length(unlist(theta.old)) - 3,
+                                                                  numSamples = ncol(object))
         controlHist[[length(controlHist)]][['q']] <- computeQFunction(hdf5 = hdf5File,pi = theta.old[['pi']],gamma = theta.old[['gamma']])
         controlHist[[length(controlHist)]][['convergence']] <-  1*any(!unname(unlist(lapply(optimMLE,function(x){x[['convergence']]}))) == 0)
         controlHist[[length(controlHist)]][['error']] <- getError(controlHist = controlHist,parHist = parHist,control = control)
@@ -837,7 +839,9 @@ differentialHMM = function(object,control,dist){
         # Updating controlHist
         ## Q-function (evaluated on the old parameters to avoid calculating the log-likelihood again)
         controlHist[[length(controlHist)]][['time']] <- difftime(time1 = Sys.time(),time2 = init.time,units = 'mins') 
-        controlHist[[length(controlHist)]][['bic']] <- computeBIC(hdf5 = hdf5File,numPar = length(unlist(theta.old)),numSamples = ncol(object))
+        controlHist[[length(controlHist)]][['bic']] <- computeBIC(hdf5 = hdf5File,
+                                                                  numPar = length(unlist(theta.old)) - 4 - (length(control$pattern)-1),
+                                                                  numSamples = ncol(object))
         controlHist[[length(controlHist)]][['q']] <- computeQFunction(hdf5 = hdf5File,pi = theta.old[['pi']],gamma = theta.old[['gamma']])
         controlHist[[length(controlHist)]][['convergence']] <- optimMLE$convergence
         controlHist[[length(controlHist)]][['error']] <- getError(controlHist = controlHist,parHist = parHist,control = control)
@@ -965,7 +969,9 @@ consensusHMM = function(object,control,dist)
         # Checking convergence
         ## Q-function (evaluated on the old parameters to avoid calculating the log-likelihood again)
         controlHist[[length(controlHist)]][['time']] <- difftime(time1 = Sys.time(),time2 = init.time,units = 'mins') 
-        controlHist[[length(controlHist)]][['bic']] <- computeBIC(hdf5 = hdf5File,numPar = length(unlist(theta.old)),numSamples = ncol(object))
+        controlHist[[length(controlHist)]][['bic']] <- computeBIC(hdf5 = hdf5File,
+                                                                  numPar = length(unlist(theta.old)) - 3,
+                                                                  numSamples = ncol(object))
         controlHist[[length(controlHist)]][['q']] <- computeQFunction(hdf5 = hdf5File,pi = theta.old[['pi']],gamma = theta.old[['gamma']])
         controlHist[[length(controlHist)]][['convergence']] <-  1*any(!unname(unlist(lapply(optimMLE,function(x){x[['convergence']]}))) == 0)
         controlHist[[length(controlHist)]][['error']] <- getError(controlHist = controlHist,parHist = parHist,control = control)
