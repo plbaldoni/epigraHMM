@@ -18,7 +18,7 @@ double computeBIC(Rcpp::StringVector hdf5,
     
     std::vector<std::string> vstrings(1);
     vstrings[0] = hdf5(0);
-    logf.load(hdf5_name(vstrings[0], "logLikelihood"));
+    logf.load(hdf5_name(vstrings[0], "logFP"));
     
     int M = logf.n_rows;
     double C = max(logf.row(M-1));
