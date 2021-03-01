@@ -68,6 +68,12 @@ callPeaks = function(object,
             stop('The argument method is not valid')
         }
     }
+    
+    # If there is no rowRanges, return vector
+    if(is.null(rowRanges(object))){
+        return(peakindex)
+    }
+    
     gr.graph <- SummarizedExperiment::rowRanges(object)[peakindex]
     gr.bed <- GenomicRanges::reduce(gr.graph)
 
