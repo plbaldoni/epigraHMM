@@ -23,6 +23,23 @@ in this initialization step.
 \details{
 To be added
 }
+\examples{
+# Creating dummy object
+countData <- rbind(matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1),
+                   matrix(rnbinom(2e3,mu = 7.5,size = 5),ncol = 1),
+                   matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1))
+
+colData <- data.frame(condition = 'A', replicate = 1)
+object <- epigraHMMDataSetFromMatrix(countData,colData)
+
+# Initializing
+object <- initializer(object,controlEM())
+
+# Visualizing initialization peaks
+#plot(assay(object),type = 'l')
+#lines(7.5*assay(object,'peaks'),col = 'red')
+
+}
 \references{
 \url{https://github.com/plbaldoni/epigraHMM}
 }

@@ -21,16 +21,32 @@
 #'
 #' @importFrom SummarizedExperiment assay
 #' @importFrom Matrix Matrix
+#' 
+#' @examples 
+#' # Creating dummy object
+#' countData <- rbind(matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1),
+#'                    matrix(rnbinom(2e3,mu = 7.5,size = 5),ncol = 1),
+#'                    matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1))
+#' 
+#' colData <- data.frame(condition = 'A', replicate = 1)
+#' object <- epigraHMMDataSetFromMatrix(countData,colData)
+#' 
+#' # Initializing
+#' object <- initializer(object,controlEM())
+#' 
+#' # Visualizing initialization peaks
+#' #plot(assay(object),type = 'l')
+#' #lines(7.5*assay(object,'peaks'),col = 'red')
 #'
 #' @export
 initializer <- function(object,control){
 
     # Checking input
-    if (!(methods::is(object)[1]=='RangedSummarizedExperiment')){
-        stop('Check argments')
+    if(!methods::is(object)[1]%in%c('SummarizedExperiment','RangedSummarizedExperiment')){
+        stop("object is neither a SummarizedExperiment nor a RangedSummarizedExperiment")
     }
-    if('viterbi' %in% SummarizedExperiment::assayNames(object)){
-        stop('viterbi assay already exists')
+    if('peaks' %in% SummarizedExperiment::assayNames(object)){
+        stop('initializing assay already exists')
     }
 
     # Organizing output
