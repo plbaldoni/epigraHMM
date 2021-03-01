@@ -23,6 +23,23 @@ This function runs either consensus (one condition, multiple samples) or
 differential (multiple conditions and samples) peak callers for epigenomic
 data.
 }
+\examples{
+
+# Creating dummy object
+countData <- rbind(matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1),
+                   matrix(rnbinom(2e3,mu = 7.5,size = 5),ncol = 1),
+                   matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1))
+
+colData <- data.frame(condition = 'A', replicate = 1)
+object <- epigraHMMDataSetFromMatrix(countData,colData)
+
+# Initializing
+object <- initializer(object,controlEM())
+
+# Running epigraHMM
+object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
+
+}
 \references{
 \url{https://github.com/plbaldoni/epigraHMM}
 }

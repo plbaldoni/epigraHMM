@@ -16,6 +16,24 @@
 #' @author Pedro L. Baldoni, \email{pedrobaldoni@gmail.com}
 #' @references
 #' \url{https://github.com/plbaldoni/epigraHMM}
+#' 
+#' @import Rhdf5lib
+#' 
+#' @examples 
+#' 
+#' # Creating dummy object
+#' countData <- rbind(matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1),
+#'                    matrix(rnbinom(2e3,mu = 7.5,size = 5),ncol = 1),
+#'                    matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1))
+#' 
+#' colData <- data.frame(condition = 'A', replicate = 1)
+#' object <- epigraHMMDataSetFromMatrix(countData,colData)
+#' 
+#' # Initializing
+#' object <- initializer(object,controlEM())
+#' 
+#' # Running epigraHMM
+#' object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
 #'
 #' @export
 epigraHMM = function(object,control,type,dist){
@@ -23,13 +41,13 @@ epigraHMM = function(object,control,type,dist){
     epsilon.em = criterion = NULL
 
     # Checking if the object is sorted
-    if(!all(base::order(colData(object)[,c('condition','replicate')],decreasing = F)==seq_len(nrow(colData(object))))){
+    if(!all(base::order(colData(object)[,c('condition','replicate')],decreasing = FALSE)==seq_len(nrow(colData(object))))){
         stop("Columns of epigraHMMDataSet are not sorted")
     }
 
     # Checking if the object is a RangedSummarizedExperiment
-    if(!methods::is(object)[1]=='RangedSummarizedExperiment'){
-        stop("object is not a RangedSummarizedExperiment.")
+    if(!methods::is(object)[1]%in%c('SummarizedExperiment','RangedSummarizedExperiment')){
+        stop("object is neither a SummarizedExperiment nor a RangedSummarizedExperiment")
     }
 
     # Check if control is correct
