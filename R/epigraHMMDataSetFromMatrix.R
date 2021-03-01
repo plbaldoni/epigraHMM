@@ -121,8 +121,8 @@ epigraHMMDataSetFromMatrix <- function(countData,colData,rowRanges = NULL){
     
     # Sorting the object
 
-    if(!all(base::order(SummarizedExperiment::colData(epigraHMMDataSet)[,c('condition','replicate')],decreasing = F)==seq_len(nrow(SummarizedExperiment::colData(epigraHMMDataSet))))){
-        epigraHMMDataSet <- epigraHMMDataSet[,base::order(SummarizedExperiment::colData(epigraHMMDataSet)[,c('condition','replicate')],decreasing = F)]
+    if(!all(base::order(SummarizedExperiment::colData(epigraHMMDataSet)[,c('condition','replicate')],decreasing = FALSE)==seq_len(nrow(SummarizedExperiment::colData(epigraHMMDataSet))))){
+        epigraHMMDataSet <- epigraHMMDataSet[,base::order(SummarizedExperiment::colData(epigraHMMDataSet)[,c('condition','replicate')],decreasing = FALSE)]
         message("Rows of colData have been sorted with respect to conditions (and replicates). The resulting colData is:")
         message(paste0(utils::capture.output(SummarizedExperiment::colData(epigraHMMDataSet)), collapse = "\n"))
     }
