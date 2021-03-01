@@ -80,7 +80,7 @@ invertDispersion = function(par,model){
         if(length(par)==3){
             return(c(par[2],1/par[3],par[1]))
         } else{
-            return(c(par[3:4],1/par[5],par[1:2]))
+            return(c(par[c(3,4)],1/par[5],par[c(1,2)]))
         }
     }
 }
@@ -178,7 +178,7 @@ optimNB <- function(par,y,x,offset,weights,control,dist){
         if(ncol(x)==1){
             model$par <- c(model$par[c(3,1)],1/model$par[2])
         } else{
-            model$par <- c(model$par[4:5],model$par[1:2],1/model$par[3])
+            model$par <- c(model$par[c(4,5)],model$par[c(1,2)],1/model$par[3])
         }
     }
     
@@ -655,7 +655,7 @@ initializerHMM = function(object,control){
     # Parameter initializations
     theta.old[['pi']] <- c(0.999,0.001)
     theta.old[['gamma']] <- estimateTransitionProb(chain = z,numStates = K)
-    theta.old[['psi']] <- lapply(1:2,function(x){
+    theta.old[['psi']] <- lapply(c(1,2),function(x){
         muvar <- dt[which(z == x),list(mu = mean((ChIP+1)/exp(offsets)),sigma2 = stats::var((ChIP+1)/exp(offsets)))]
         muvar[,c(log(mu),min((mu^2)/max(0,sigma2-mu),control[['maxDisp']]))]
     })
@@ -673,7 +673,7 @@ initializerHMM = function(object,control){
         # E-step
         expStep(pi = theta.old[['pi']],
                 gamma = theta.old[['gamma']],
-                logf = do.call(cbind,lapply(1:2,function(x){stats::dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]+as.numeric(assay(object,'offsets'))),size = theta.old[['psi']][[x]][2],log = TRUE)})),
+                logf = do.call(cbind,lapply(c(1,2),function(x){stats::dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]+as.numeric(assay(object,'offsets'))),size = theta.old[['psi']][[x]][2],log = TRUE)})),
                 hdf5 = hdf5File)
         
         # M-step
