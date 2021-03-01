@@ -3,7 +3,12 @@ Title: Epigenomic R-based analysis with hidden Markov models
 Version: 1.0.0
 Date: 2019-12-10
 Authors@R: c(person("Pedro", "Baldoni", email = "pedrobaldoni@gmail.com", role = c("aut","cre")))
-Description: epigrahmm provides a set of tools for the analysis of epigenomic data based on hidden Markov Models.
+biocViews: ChIPSeq, ATACSeq, DNaseSeq, HiddenMarkovModel, Epigenetics
+Description: epigraHMM provides a set of tools for the analysis of epigenomic data 
+    based on hidden Markov Models. It contains two separate peak callers, one for consensus peaks
+    from biological/technical replicates, and and one for differial peaks from multi-replicate 
+    multi-condition experiments. For the latter, window-specific posterior probabilities associated 
+    with read count enrichment for every possible combinatorial pattern are provided.
 License: MIT + file LICENSE
 Imports: 
     Rcpp,
@@ -31,4 +36,7 @@ Encoding: UTF-8
 SystemRequirements: GNU make
 Suggests: 
     testthat,
-    MMDiffBamSubset
+    MMDiffBamSubset,
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
