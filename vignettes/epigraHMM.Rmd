@@ -1,0 +1,19 @@
+---
+title: "Consensus and Differential Peak Calling With epigraHMM"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Consensus and Differential Peak Calling With epigraHMM}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(epigraHMM)
+```
