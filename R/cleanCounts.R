@@ -20,6 +20,31 @@
 #'
 #' @importFrom stats predict
 #' @importFrom MASS glm.nb
+#' 
+#' @examples 
+#' 
+#' # Creating dummy object
+#' gc <- rbeta(3e3,50,50)
+#' 
+#' countData <- list('counts' = rbind(matrix(rnbinom(2e3,mu = 7.5,size = 10),ncol = 1),
+#'                                    matrix(rnbinom(3e3,mu = exp(0.5 + 8*gc),size = 5),ncol = 1),
+#'                                    matrix(rnbinom(2e3,mu = 7.5,size = 10),ncol = 1)),
+#'                   'gc' = matrix(c(rbeta(2e3,50,50),gc,rbeta(2e3,50,50)),ncol = 1))
+#' 
+#' colData <- data.frame(condition = 'A', replicate = 1)
+#' object <- epigraHMMDataSetFromMatrix(countData,colData)
+#' 
+#' # Initializing
+#' object <- initializer(object = object,controlEM())
+#' 
+#' # Cleaning counts
+#' object <- cleanCounts(object = object,effectNames = 'gc',byNames = 'peaks')
+#' 
+#' # Plotting the cleaned data
+#' #par(mfrow = c(2,1))
+#' #smoothScatter(log1p(assay(object))~assay(object,'gc'),xlab = 'gc',ylab = 'log counts')
+#' #smoothScatter(as.numeric(log(assay(object)+1) - assay(object,'offsets'))~assay(object,'gc'),
+#' #              xlab = 'gc',ylab = 'log cleaned counts')
 #'
 #' @references
 #' \url{https://github.com/plbaldoni/epigraHMM}
@@ -28,9 +53,13 @@
 cleanCounts <- function(object,effectNames,byNames = NULL){
 
     # Checking input
-    if (!((methods::is(object)[1]=='RangedSummarizedExperiment') &
-        all(effectNames %in% assayNames(object)) & (byNames %in% assayNames(object)))){
-        stop('Check argments')
+    if (!((methods::is(object)[1]%in%c('SummarizedExperiment','RangedSummarizedExperiment')) &
+        all(effectNames %in% assayNames(object)))){
+        if(!is.null(byNames)){
+            if(!(byNames %in% assayNames(object))){
+                stop('Check arguments')
+            }
+        }
     }
 
     # Looping through samples
