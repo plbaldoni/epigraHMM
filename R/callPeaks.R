@@ -22,6 +22,31 @@
 #' @importFrom GenomicRanges reduce start end
 #' @importFrom data.table as.data.table
 #' @importFrom rtracklayer wigToBigWig
+#' 
+#' @examples 
+#' 
+#' # Creating dummy object
+#' countData <- rbind(matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1),
+#'                    matrix(rnbinom(2e3,mu = 7.5,size = 5),ncol = 1),
+#'                    matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1))
+#' 
+#' colData <- data.frame(condition = 'A', replicate = 1)
+#' 
+#' rowRanges <- GenomicRanges::GRanges('chrA',
+#' IRanges::IRanges(start = seq(from = 1, length.out = 4e3,by = 250),width = 250))
+#' 
+#' object <- epigraHMMDataSetFromMatrix(countData,colData,rowRanges)
+#' 
+#' # Initializing
+#' object <- initializer(object,controlEM())
+#' 
+#' # Running epigraHMM
+#' object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
+#' 
+#' # Calling peaks
+#' peaks <- callPeaks(object = object,
+#'                    hdf5 = S4Vectors::metadata(object)$output,
+#'                    method = 'viterbi')
 #'
 #' @export
 callPeaks = function(object,

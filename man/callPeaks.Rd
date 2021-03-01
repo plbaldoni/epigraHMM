@@ -26,6 +26,32 @@ A GRanges object with differential peak calls in BED 6+3 format
 This function imports the output from `epigraHMM` and outputs a set of
 peaks (consensus or differential) for a given FDR control threshold or Viterbi sequence.
 }
+\examples{
+
+# Creating dummy object
+countData <- rbind(matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1),
+                   matrix(rnbinom(2e3,mu = 7.5,size = 5),ncol = 1),
+                   matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1))
+
+colData <- data.frame(condition = 'A', replicate = 1)
+
+rowRanges <- GenomicRanges::GRanges('chrA',
+IRanges::IRanges(start = seq(from = 1, length.out = 4e3,by = 250),width = 250))
+
+object <- epigraHMMDataSetFromMatrix(countData,colData,rowRanges)
+
+# Initializing
+object <- initializer(object,controlEM())
+
+# Running epigraHMM
+object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
+
+# Calling peaks
+peaks <- callPeaks(object = object,
+                   hdf5 = S4Vectors::metadata(object)$output,
+                   method = 'viterbi')
+
+}
 \references{
 \url{https://github.com/plbaldoni/epigraHMM}
 }
