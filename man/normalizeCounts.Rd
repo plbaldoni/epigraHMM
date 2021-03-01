@@ -22,6 +22,18 @@ This function performs a non-linear normalization of counts with respect to a re
 \details{
 This function `limma::loessFit`, which simply a wrapper for the `stats::lowess` smoother.
 }
+\examples{
+
+# Creating dummy object
+countData <- list('counts' = matrix(rpois(1e5,10),ncol = 2),
+'controls' = matrix(rpois(1e5,5),ncol = 2))
+colData <- data.frame(condition = c('A','A'), replicate = c(1,2))
+object <- epigraHMMDataSetFromMatrix(countData,colData)
+
+# Normalizing counts
+object <- normalizeCounts(object = object,control = controlEM(), span = 1)
+
+}
 \references{
 \url{https://github.com/plbaldoni/epigraHMM}
 }
