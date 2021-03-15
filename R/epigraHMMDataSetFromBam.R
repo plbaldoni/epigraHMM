@@ -61,21 +61,20 @@
 #' @importFrom csaw maximizeCcf correlateReads readParam
 #' @importFrom data.table as.data.table
 #' @importFrom S4Vectors decode
+#' @importFrom RCurl url.exists
 #' 
 #' @examples
-#' \dontrun{
-#' Rsamtools::indexBam(MMDiffBamSubset::WT.AB2())
-#' Rsamtools::indexBam(MMDiffBamSubset::Input())
+#' bamFiles <- c(system.file("extdata","euratrans","lv-H3K4me3-SHR-male-bio2-tech1.bam",
+#'                           package="chromstaRData"),
+#'               system.file("extdata","euratrans","lv-H3K4me3-SHR-male-bio3-tech1.bam",
+#'                           package="chromstaRData"))
 #' 
-#' bamFiles <- list('counts' = MMDiffBamSubset::WT.AB2(),
-#'                 'controls' = MMDiffBamSubset::Input())
-#'                 
-#' colData <- data.frame(condition = 'WT',replicate = 1)
-#'                 
-#' epigraHMMDataSetFromBam(bamFiles,colData,genome = 'mm10',windowSize = 250,
-#'                         gapTrack = TRUE,
-#'                         blackList = TRUE)
-#' }
+#' object <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
+#'                                   colData = data.frame(condition = 'SHR',replicate = c(1,2)),
+#'                                   genome = 'rn4',
+#'                                   windowSize = 250,
+#'                                   gapTrack = TRUE,
+#'                                   blackList = TRUE)
 #'
 #' @export
 epigraHMMDataSetFromBam <- function(bamFiles,
@@ -153,7 +152,7 @@ epigraHMMDataSetFromBam <- function(bamFiles,
     }
     
     # Setting up blacklist track
-    if(blackList == TRUE & is.character(genome)){
+    if(blackList == TRUE & is.character(genome) & RCurl::url.exists(paste0('https://github.com/Boyle-Lab/Blacklist/raw/master/lists/',genome,'-blacklist.v2.bed.gz'))){
         gr.blackList <- GenomicRanges::trim(GenomicRanges::makeGRangesFromDataFrame(df = data.table::as.data.table(rtracklayer::import(rtracklayer::BEDFile(paste0('https://github.com/Boyle-Lab/Blacklist/raw/master/lists/',genome,'-blacklist.v2.bed.gz')))),
                                                                                     seqinfo = GenomeInfoDb::Seqinfo(genome=genome)))
     } else{

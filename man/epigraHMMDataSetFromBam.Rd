@@ -63,19 +63,17 @@ Current available genomes are ce10, dm3, hg19, hg38, and mm10.
 If \code{blackList} is a GRanges object, the function will discard any genomic coordinate overlaping regions from \code{blackList}.
 }
 \examples{
-\dontrun{
-Rsamtools::indexBam(MMDiffBamSubset::WT.AB2())
-Rsamtools::indexBam(MMDiffBamSubset::Input())
+bamFiles <- c(system.file("extdata","euratrans","lv-H3K4me3-SHR-male-bio2-tech1.bam",
+                          package="chromstaRData"),
+              system.file("extdata","euratrans","lv-H3K4me3-SHR-male-bio3-tech1.bam",
+                          package="chromstaRData"))
 
-bamFiles <- list('counts' = MMDiffBamSubset::WT.AB2(),
-                'controls' = MMDiffBamSubset::Input())
-                
-colData <- data.frame(condition = 'WT',replicate = 1)
-                
-epigraHMMDataSetFromBam(bamFiles,colData,genome = 'mm10',windowSize = 250,
-                        gapTrack = TRUE,
-                        blackList = TRUE)
-}
+object <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
+                                  colData = data.frame(condition = 'SHR',replicate = c(1,2)),
+                                  genome = 'rn4',
+                                  windowSize = 250,
+                                  gapTrack = TRUE,
+                                  blackList = TRUE)
 
 }
 \references{
