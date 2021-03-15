@@ -29,7 +29,11 @@ Imports:
     Rhdf5lib,
     rhdf5,
     Matrix,
-    MASS
+    MASS,
+    scales,
+    ggpubr,
+    ggplot2,
+    RCurl
 LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
 RoxygenNote: 7.1.1
 Encoding: UTF-8
