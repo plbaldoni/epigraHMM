@@ -87,7 +87,7 @@ callPeaks = function(object,
     if(saveToFile){
         chrset <- as.character(unique(SummarizedExperiment::seqnames(SummarizedExperiment::rowRanges(object))))
 
-        filenames <- sapply(file.path(path.expand(control[['tempDir']]),paste0(control[['fileName']],'_',c('peaks.bed',paste0('prob_',chrset,'.wig')))),checkPath,USE.NAMES = FALSE)
+        filenames <- vapply(file.path(path.expand(control[['tempDir']]),paste0(control[['fileName']],'_',c('peaks.bed',paste0('prob_',chrset,'.wig')))),checkPath,FUN.VALUE = 'character',USE.NAMES = FALSE)
         names(filenames) <- c('peaks',paste0('prob_',chrset))
 
         # Writing bed file with peaks
@@ -134,7 +134,7 @@ callPeaks = function(object,
         if(length(unique((colData(object)[['condition']])))>1){
 
             mixProbSet <- rhdf5::h5read(hdf5,'mixturePatterns')
-            filenames <- c(filenames,sapply(file.path(path.expand(control[['tempDir']]),paste0(control[['fileName']],'_',paste0('mixProb_',mixProbSet,'.wig'))),checkPath,USE.NAMES = FALSE))
+            filenames <- c(filenames,vapply(file.path(path.expand(control[['tempDir']]),paste0(control[['fileName']],'_',paste0('mixProb_',mixProbSet,'.wig'))),checkPath,FUN.VALUE = 'character',USE.NAMES = FALSE))
             names(filenames)[names(filenames)==""] <- mixProbSet
 
             for(i in seq_len(length(mixProbSet))){
