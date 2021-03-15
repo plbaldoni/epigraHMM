@@ -7,6 +7,7 @@
 #' @rdname pipe
 #' @keywords internal
 #' @export
+#' @examples rnorm(100) %>% mean()
 #' @importFrom magrittr %>%
 #' @usage lhs \%>\% rhs
 NULL
