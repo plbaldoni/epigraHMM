@@ -637,8 +637,8 @@ initializerHMM = function(object,control){
     K <- 2
     controlHist <- list(controlList())
     parHist <- list()
-    theta.old <- sapply(c('pi','gamma','psi'),function(x) NULL)
-    theta.new <- sapply(c('pi','gamma','psi'),function(x) NULL)
+    theta.old <- list('pi' = NULL,'gamma' = NULL,'psi' = NULL)
+    theta.new <- list('pi' = NULL,'gamma' = NULL,'psi' = NULL)
     
     # Transforming data into data.table and calculating scores
     dt <- data.table::data.table(ChIP = as.numeric(assay(object)),offsets = as.numeric(assay(object,'offsets')))
@@ -754,8 +754,8 @@ differentialHMM = function(object,control,dist){
     nGroup <- length(unique(group))
     parHist <- list()
     controlHist <- list(controlList())
-    theta.old <- sapply(c('pi','gamma','delta','psi'),function(x) NULL)
-    theta.new <- sapply(c('pi','gamma','delta','psi'),function(x) NULL)
+    theta.old <- list('pi' = NULL,'gamma' = NULL, 'delta' = NULL,'psi' = NULL)
+    theta.new <- list('pi' = NULL,'gamma' = NULL, 'delta' = NULL,'psi' = NULL)
     
     # Initializing patterns & mixtures
     zPatterns <- enumeratePatterns(object = object,group = group)
@@ -896,8 +896,8 @@ consensusHMM = function(object,control,dist)
     K <- 2
     parHist <- list()
     controlHist <- list(controlList())
-    theta.old <- sapply(c('pi','gamma','psi'),function(x) NULL)
-    theta.new <- sapply(c('pi','gamma','psi'),function(x) NULL)
+    theta.old <- list('pi' = NULL,'gamma' = NULL,'psi' = NULL)
+    theta.new <- list('pi' = NULL,'gamma' = NULL,'psi' = NULL)
     
     # Initializing patterns & mixtures
     zPatterns <- enumeratePatterns(object = object,group = SummarizedExperiment::colData(object)$condition)
