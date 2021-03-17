@@ -42,7 +42,7 @@ Encoding: UTF-8
 SystemRequirements: GNU make
 Suggests: 
     testthat,
-    MMDiffBamSubset,
+    chromstaRData,
     knitr,
     rmarkdown
 VignetteBuilder: knitr
