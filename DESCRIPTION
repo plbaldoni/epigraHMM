@@ -33,7 +33,9 @@ Imports:
     scales,
     ggpubr,
     ggplot2,
-    RCurl
+    RCurl,
+    pheatmap,
+    grDevices
 LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
 RoxygenNote: 7.1.1
 Encoding: UTF-8
