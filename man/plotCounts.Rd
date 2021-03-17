@@ -4,7 +4,7 @@
 \alias{plotCounts}
 \title{Create a plot with the results from epigraHMM}
 \usage{
-plotCounts(object, ranges, peaks = NULL, hdf5 = NULL)
+plotCounts(object, ranges, peaks = NULL, annotation = NULL, hdf5 = NULL)
 }
 \arguments{
 \item{object}{an epigraHMMDataSet}
@@ -12,6 +12,8 @@ plotCounts(object, ranges, peaks = NULL, hdf5 = NULL)
 \item{ranges}{a GRanges object or a pair of integers with the genomic corrdinates/windows to be plotted}
 
 \item{peaks}{an optional parameter with a GRanges object or a vector of logicals (with length equal to the number of rows in `object`) specifying the genomic corrdinates/windows with peaks}
+
+\item{annotation}{an optional parameter with a GRanges object or a vector of logicals (with length equal to the number of rows in `object`) specifying the genomic corrdinates/windows of an annotation track}
 
 \item{hdf5}{an optional character string with the hdf5 file path from `epigraHMM`}
 }
