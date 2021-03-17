@@ -1,4 +1,27 @@
 ################################################################################
+### Check consistency of arguments in plotCounts.R
+################################################################################
+
+checkPlot = function(x,ranges){
+    if (!is.null(x)) {
+        if (!((
+            methods::is(ranges)[1] == "GRanges" &
+            methods::is(x)[1] == "GRanges"
+        ) |
+        (
+            methods::is(ranges)[1] %in% c("integer", "numeric") &
+            methods::is(x)[1] == "logical"
+        )
+        )) {
+            stop(
+                'If ranges is a GRanges object, then peaks/annotation must also be a GRanges object.
+                 If ranges is a numeric vector object, then peaks/annotation must be a vector of logicals'
+            )
+        }
+    }
+}
+
+################################################################################
 ### Estimate transition probability from a sequence of integers
 ################################################################################
 
