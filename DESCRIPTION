@@ -44,5 +44,6 @@ Suggests:
     testthat,
     chromstaRData,
     knitr,
-    rmarkdown
+    rmarkdown,
+    BiocStyle
 VignetteBuilder: knitr
