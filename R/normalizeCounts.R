@@ -4,6 +4,7 @@
 #'
 #' @param object an epigraHMMDataSet
 #' @param control list of control arguments from controlEM()
+#' @param span the span parameter of \code{\link[limma]{loessFit}} (default is 1)
 #' @param ... arguments to be passed to \code{\link[limma]{loessFit}} for loess calculation
 #'
 #' @details
@@ -34,7 +35,7 @@
 #' object <- normalizeCounts(object = object,control = controlEM(), span = 1)
 #'
 #' @export
-normalizeCounts <- function(object,control,...){
+normalizeCounts <- function(object,control,span = 1,...){
     
     weights = minus = average = NULL
 
@@ -58,7 +59,7 @@ normalizeCounts <- function(object,control,...){
                              average = (logSample[,x] + logReference)/2,
                              weights = 1)
         
-        dt_reduced <- dt_all[,list(weights = sum(weights)),by = c('minus','average')][,offsets := limma::loessFit(y=minus,x=average,weights=weights,min.weight = 0,max.weight = Inf,...)$fitted]
+        dt_reduced <- dt_all[,list(weights = sum(weights)),by = c('minus','average')][,offsets := limma::loessFit(y=minus,x=average,weights=weights,min.weight = 0,max.weight = Inf,span = span,...)$fitted]
         
         dt_all <- merge(dt_all,dt_reduced[,c('minus','average','offsets')],by = c('minus','average'),all.x = TRUE, sort = FALSE)
         
