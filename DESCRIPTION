@@ -45,5 +45,7 @@ Suggests:
     chromstaRData,
     knitr,
     rmarkdown,
-    BiocStyle
+    BiocStyle,
+    BSgenome.Rnorvegicus.UCSC.rn4,
+    gcapc
 VignetteBuilder: knitr
