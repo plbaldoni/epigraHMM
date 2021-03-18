@@ -172,7 +172,7 @@ epigraHMM allows users to input their own normalization offsets via `addOffsets`
 
 For instance, one may want to add GC-content normalizing offsets, which can be obtained by from the Bioconductor package [gcapc](https://doi.org/doi:10.18129/B9.bioc.gcapc). Note that, in this case, `refineSites` will fetch data from the Bioconductor package [BSgenome.Rnorvegicus.UCSC.rn4](https://doi.org/doi:10.18129/B9.bioc.BSgenome.Rnorvegicus.UCSC.rn4), which must be installed locally. For users interested in utilizing `gcapc` for GC-content normalization, we strongly recommend them to follow the suggested analysis steps from the authors' [vignette](https://bioconductor.org/packages/release/bioc/vignettes/gcapc/inst/doc/gcapc.html).
 
-```{r gcnorm,fig.show='hide',results='hide',eval=FALSE}
+```{r gcnorm,fig.show='hide',results='hide'}
 library(gcapc)
 library(BSgenome.Rnorvegicus.UCSC.rn4)
 
