@@ -50,12 +50,17 @@
 #'
 #' @export
 callPeaks = function(object,
-                     hdf5,
+                     hdf5 = metadata(object)$output,
                      method = 'viterbi',
                      saveToFile = FALSE,
                      control = NULL)
 {
     subjectHits = i = NULL
+    
+    # Checking if hdf5 exists
+    if(!file.exists(hdf5)){
+        stop('Input hdf5 file does not exist')
+    }
 
     # Calling peaks
     prob <- exp(rhdf5::h5read(hdf5,'logProb1')[,2])
