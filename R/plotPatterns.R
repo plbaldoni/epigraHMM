@@ -52,7 +52,7 @@
 #' @export
 plotPatterns = function(object,
                         ranges,
-                        hdf5,
+                        hdf5 = metadata(object)$output,
                         colors = NULL) {
 
     # Checking if differential analysis
@@ -103,5 +103,6 @@ plotPatterns = function(object,
                                      unique(seqnames(sub_object)),':',
                                      scales::comma(min(start(sub_object))),'-',
                                      scales::comma(max(end(sub_object))),')'),
+                       labels_row = 'Genomic\nWindows',
                        annotation_names_col = FALSE)
 }

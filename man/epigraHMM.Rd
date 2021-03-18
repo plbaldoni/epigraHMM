@@ -4,7 +4,7 @@
 \alias{epigraHMM}
 \title{Perform peak calling of epigenomic data sets}
 \usage{
-epigraHMM(object, control, type, dist)
+epigraHMM(object, control, type, dist = "nb")
 }
 \arguments{
 \item{object}{an epigraHMMDataSet}
@@ -13,7 +13,7 @@ epigraHMM(object, control, type, dist)
 
 \item{type}{character, either \code{"consensus"} or \code{"differential"}}
 
-\item{dist}{character, either \code{"zinb"} or \code{"nb"}}
+\item{dist}{character, either \code{"zinb"} or \code{"nb"} (default)}
 }
 \value{
 To be added

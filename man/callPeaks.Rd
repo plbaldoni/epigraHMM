@@ -4,7 +4,13 @@
 \alias{callPeaks}
 \title{Summarize peak calls and optionally create a BED 6+3 file in broadPeak format for visualization}
 \usage{
-callPeaks(object, hdf5, method = "viterbi", saveToFile = FALSE, control = NULL)
+callPeaks(
+  object,
+  hdf5 = metadata(object)$output,
+  method = "viterbi",
+  saveToFile = FALSE,
+  control = NULL
+)
 }
 \arguments{
 \item{object}{an epigraHMMDataSet}

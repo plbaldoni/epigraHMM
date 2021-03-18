@@ -4,7 +4,7 @@
 \alias{plotPatterns}
 \title{Create a plot of differerential patterns posterior probabilities from epigraHMM}
 \usage{
-plotPatterns(object, ranges, hdf5, colors = NULL)
+plotPatterns(object, ranges, hdf5 = metadata(object)$output, colors = NULL)
 }
 \arguments{
 \item{object}{an epigraHMMDataSet}

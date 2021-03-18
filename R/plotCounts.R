@@ -41,9 +41,9 @@
 #' @export
 plotCounts = function(object,
                       ranges,
+                      hdf5 = metadata(object)$output,
                       peaks = NULL,
-                      annotation = NULL,
-                      hdf5 = NULL) {
+                      annotation = NULL) {
     Sample = Counts = name = P = Window = NULL
     
     # Checking ranges
