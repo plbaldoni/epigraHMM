@@ -7,7 +7,7 @@
 #' @param object an epigraHMMDataSet
 #' @param control list of control arguments from \code{\link{controlEM}}
 #' @param type character, either \code{"consensus"} or \code{"differential"}
-#' @param dist character, either \code{"zinb"} or \code{"nb"}
+#' @param dist character, either \code{"zinb"} or \code{"nb"} (default)
 #'
 #' @return
 #'
@@ -36,7 +36,7 @@
 #' object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
 #'
 #' @export
-epigraHMM = function(object,control,type,dist){
+epigraHMM = function(object,control,type,dist = 'nb'){
 
     epsilon.em = criterion = NULL
 
