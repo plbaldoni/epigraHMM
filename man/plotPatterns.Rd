@@ -35,9 +35,9 @@ countData <- cbind(rbind(matrix(rnbinom(1e2,mu = 2,size = 10),ncol = 1),
                          matrix(rnbinom(1e2,mu = 2,size = 10),ncol = 1)))
 
 colData <- data.frame(condition = c('A','B'), replicate = c(1,1))
-rowRanges <- GRanges('chrA',
-                     IRanges(start = seq(1,by = 500,length.out = nrow(countData)),
-                             width = 500))
+rowRanges <- GenomicRanges::GRanges('chrA',
+                     IRanges::IRanges(start = seq(1,by = 500,
+                     length.out = nrow(countData)),width = 500))
 
 object <- epigraHMMDataSetFromMatrix(countData,colData,rowRanges = rowRanges)
 
