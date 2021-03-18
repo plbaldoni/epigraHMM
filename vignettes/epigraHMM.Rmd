@@ -1,19 +1,384 @@
 ---
-title: "Consensus and Differential Peak Calling With epigraHMM"
-output: rmarkdown::html_vignette
+title: "Consensus and differential peak calling with epigraHMM"
+package: epigraHMM
+author:
+- name: Pedro L. Baldoni
+- name: Naim U. Rashid
+- name: Joseph G. Ibrahim
+date: "`r format(Sys.Date(), '%m/%d/%Y')`"
+bibliography: bibliography.bib
+abstract: > 
+  A fundamental task in the analysis of data resulting from epigenomic sequencing assays is the detection of genomic regions with significant or differential sequencing read enrichment. epigraHMM provides set of tools to flexibly analyze data from a wide range of high-throughput epigenomic assays (ChIP-seq, ATAC-seq, DNase-seq, etc.) in an end-to-end pipeline. It includes functionalities for data pre-processing, normalization, consensus and differential peak calling algorithms, as well as data visualization. The data pre-processing steps are heavily integrated with other Bioconductor packages and allow the user to transform sequencing/alignment files into count matrices that are suitable for the final analysis of the data. The current implementation is optimized for genome-wide analyses of epigenomic data and is efficient for the analysis under multi-sample multiple-condition settings, as well as consensus peak calling in multi-sample single-condition settings. epigraHMM uses two modified versions of hidden Markov models that are robust to the diversity of peak profiles found in epigenomic data and are particularly useful for epigenomic marks that exhibit short and broad peaks. Analyses can be adjusted for possible technical artifacts present in the data and for input control experiments, if available. Results from the peak calling algorithms can be assessed using some of the available tools for visualization that allow the inspection of detected peaks and read counts. epigraHMM package version: `r packageVersion("epigraHMM")`
+output:
+  BiocStyle::html_document:
+      highlight: pygments
+      toc_float: true
+      fig_width: 6
 vignette: >
   %\VignetteIndexEntry{Consensus and Differential Peak Calling With epigraHMM}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+  %\usepackage[utf8]{inputenc}
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
+knitr::opts_chunk$set(tidy = FALSE,
+                      cache = FALSE,
+                      dev = "png",
+                      message = FALSE, error = FALSE, warning = TRUE)
 ```
 
-```{r setup}
+# Workflow
+
+## How to cite epigraHMM
+
+If you use epigraHMM in published research for _consensus_ peak calling of epigenomic data, please cite:
+
+> Baldoni, PL, Rashid, NU, Ibrahim, JG. Improved detection of epigenomic marks with mixed‐effects hidden Markov models. Biometrics. 2019; 75: 1401–1413. https://doi.org/10.1111/biom.13083
+
+If epigraHMM is used in published research for _differential_ peak calling of epigenomic data, please cite:
+
+> Baldoni, PL, Rashid, NU, Ibrahim, JG. Efficient Detection and Classification of Epigenomic Changes Under Multiple Conditions. bioRxiv. 2019. https://doi.org/10.1101/864124
+
+## How to get help for epigraHMM
+
+Exported functions from epigraHMM are fully documented. Users looking for help for a particular epigraHMM function can use the standard R help, such as `help(epigraHMM)`. Questions, bug reports, and suggestions can be sent directly to the authors through the Bioconductor support site https://support.bioconductor.org. Guidelines for posting on the support site can be found at http://www.bioconductor.org/help/support/posting-guide. Users should not request support via direct email to the authors.
+
+## Quick start
+
+The code chunk below presents the main steps of the analysis of epigenomic data using epigraHMM. In this vignette, we utilize ChIP-seq data from the Bioconductor package `chromstaRData`.
+
+```{r introduction_workflow}
+library(GenomicRanges)
 library(epigraHMM)
+library(SummarizedExperiment)
+
+# Creating input for epigraHMM
+bamFiles <- list.files(path = system.file(package = "chromstaRData"),
+                       pattern = 'H3K27me3-BN*.*bam$',
+                       recursive = TRUE,full.names = TRUE)
+
+colData <- data.frame(condition = c('BN','BN'),replicate = c(1,2))
+
+# Creating epigraHMM object
+object <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
+                                  colData = colData,
+                                  genome = 'rn4',
+                                  windowSize = 500,
+                                  gapTrack = TRUE)
+
+# Creating normalizing offsets
+object <- normalizeCounts(object = object,control = controlEM())
+
+# Initializing epigraHMM
+object <- initializer(object = object,control = controlEM())
+
+# Running epigraHMM for consensus peak detection 
+object <- epigraHMM(object = object,control = controlEM(),type = 'consensus')
+
+# Calling peaks with FDR control of 0.05
+peaks <- callPeaks(object = object,control = controlEM(),method = 0.05)
 ```
+
+## Data input
+
+epigraHMM takes as data input either a matrix of non-negative counts or binary alignment map (BAM) files. Regardless of the choice of input format, epigraHMM allows the user to input data from both epigenomic experiments (e.g. ChIP-seq, ATAC-seq) and controls (e.g. controls without immunoprecipitation). To input data in the count matrix format, users should use the function *epigraHMMDataSetFromMatrix*. Alternatively, users may use the function *epigraHMMDataSetFromBam* to input data in the format of BAM files. 
+
+Either way, the output will be an *epigraHMMDataSet* object that is used to store the input data, the model offsets, and the results from the peak calling algorithms. Specifically, *epigraHMMDataSet* is a [RangedSummarizedExperiment](https://bioconductor.org/packages/release/bioc/html/SummarizedExperiment.html) from which one can access the information about genomic coordinates and samples with the functions *rowRanges* and *colData*. Counts from epigenomic experiments are stored in the *epigraHMMDataSet*'s assay 'counts'.
+
+### Count matrix input
+
+For input matrices, counts should be organized in a 'features by samples' format, i.e., rows represent genomic coordinates and columns represent samples. One can use the function *epigraHMMDataSetFromMatrix* to create an *epigraHMMDataSet* from matrices of read counts, which takes as input a matrix (or list of matrices) of non-negative integers (`countData`), a *data.frame* with the information about the samples (`colData`), and an optional *GRanges* object with the genomic coordinates associated with the matrix of counts (`rowRanges`).
+
+If `countData` is a list of matrices, `countData` must be a named list and contain (at least) a matrix `counts` of read counts pertaining to the epigenomic experiment of interest (ChIP-seq, ATAC-seq, etc.). If additional matrices are included in the `countData` list, they can have any desired name such as `gc` and `inputcontrol`, for example. The input `colData` must contain variables named as **condition** and **replicate**. The variable condition refers to the experimental condition identifier (e.g. cell line name). The variable replicate refers to the replicate identification number (unique for each condition). Additional columns included in the `colData` input will be passed to the resulting epigraHMMDataSet object and can be accessed via *colData* function.
+
+```{r data_input_countmatrixinput}
+countData <- list('counts' = matrix(rpois(4e5,10),ncol = 4),
+                  'inputcontrol' = matrix(rpois(4e5,5),ncol = 4))
+
+colData <- data.frame(condition = c('A','A','B','B'),
+                      replicate = c(1,2,1,2))
+
+rowRanges <- GRanges('chrA',IRanges(start = seq(1,by = 500, length.out = 1e5),
+                                    width = 500))
+
+object_matrix <- epigraHMMDataSetFromMatrix(countData = countData,
+                                            colData = colData,
+                                            rowRanges = rowRanges)
+
+object_matrix
+```
+
+### Alignment file input
+
+One can use the function *epigraHMMDataSetFromBam* to create an *epigraHMMDataSet* from a set of alignment files in BAM format (`bamFiles`). Additional inputs include a *data.frame* with the information about the samples (`colData`), the reference genome of interest (`genome`), the size of the genomic windows where read counts will be computed (`windowSize`), and optional logicals indicating whether to exclude genomic coordinates associated with either gap or blacklisted regions (`gapTrack` and `blackList`; @amemiya2019encode)^[These arguments can also be *GRanges* objects (see below for details)].
+
+The input argument `bamFiles` specifies the path to the experimental files in BAM format. `bamFiles` can be either a character vector or a named list of character vectors with the path for BAM files. If `bamFiles` is a list of character vectors, it must be a named list and contain (at least) a character vector `counts` pertaining to the path of the epigenomic experiment of interest (ChIP-seq, ATAC-seq, etc.). If additional character vectors are included in the `bamFiles` list, they can have any desired name such as `inputcontrol`, for example. The alignment index '.bai' files must be stored in the same directory of their respective BAM files and must be named after their respective BAM files with the additional '.bai' suffix. When computing read counts, the fragment length will be estimated using [csaw](https://bioconductor.org/packages/release/bioc/html/csaw.html) cross-correlation analysis with default parameters after discarding any gap or black listed regions.
+
+The input `colData` must contain variables named as **condition** and **replicate**. The variable condition refers to the experimental condition identifier (e.g. cell line name). The variable replicate refers to the replicate identification number (unique for each condition). Additional columns included in the `colData` input will be passed to the resulting epigraHMMDataSet object and can be accessed via *colData* function.
+
+The input `genome` can be either a single string with the name of the reference genome (e.g. 'hg19') or a *GRanges* object with the chromosome lengths of the reference genome. By default, the function *epigraHMMDataSetFromBam* calls *Seqinfo* from [GenomeInfoDb](https://bioconductor.org/packages/release/bioc/html/GenomeInfoDb.html) to fetch the chromosome lengths of the specified genome. See `?GenomeInfoDb::fetchExtendedChromInfoFromUCSC` for the list of UCSC genomes that are currently supported. The input `windowSize` must be an integer value specifying the size of genomic windows where read counts will be computed.
+
+If the optional `gapTrack = TRUE` and the name of a reference genome is passed as input through `genome` (e.g. 'hg19'), *epigraHMMDataSetFromBam* will discard any genomic coordinate overlapping regions specified by the respective [UCSC gap table](https://genome.ucsc.edu/cgi-bin/hgTables). If `gapTrack` is a *GRanges* object, the function will discard any genomic coordinate overlapping regions of `gapTrack`.
+
+If the optional `blackList = TRUE` and the name of a reference genome is passed as input through `genome` (e.g. 'hg19'), *epigraHMMDataSetFromBam* will fetch the manually curated [ENCODE blacklist tracks](https://github.com/Boyle-Lab/Blacklist/tree/master/lists) (Version 2). Current available genomes are ce10, dm3, hg19, hg38, and mm10. If `blackList` is a *GRanges* object, the function will discard any genomic coordinate overlapping regions from `blackList`
+
+```{r data_input_baminput}
+# Creating input for epigraHMM
+bamFiles <- list.files(path = system.file(package = "chromstaRData"),
+                       pattern = 'H3K4me3*.*bam$',
+                       recursive = TRUE,full.names = TRUE)
+
+colData <- data.frame(condition = c('BN','BN','SHR','SHR'),
+                      replicate = c(1,2,1,2))
+
+# Creating epigraHMM object
+object_bam <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
+                                      colData = colData,
+                                      genome = 'rn4',
+                                      windowSize = 250,
+                                      gapTrack = TRUE)
+
+object_bam
+```
+
+## Data normalization
+
+The function *normalizeCounts* implements a non-linear normalization via model offsets. It takes as input either an *epigraHMMDataSet* object or a matrix of non-negative read counts (input `object`). Specifically, the normalization method is based on a loess smoothing fit comparing the difference (M from MA plot) and average (A from MA plot) of each sample (log-transformed counts + 1) with a reference sample created as the row-wise log-transformed geometric mean. Here, the loess smoothing fit is used as an offset term in the epigraHMM model.
+
+We strongly recommend users to utilize `normalizeCounts` their analyses as epigenomic data sets are often subject to non-linear biases. That is, local differences in read count distribution between samples vary with the overall local read abundance [@lun2015csaw]. The current implementation uses the function *loessFit* from [limma](https://www.bioconductor.org/packages/release/bioc/html/limma.html). Users might pass further arguments to *loessFit* through the three dot ellipsis `...`. For instance, users might find useful to try different proportions of the data to be used in the local regression window (argument `span`, a positive value between 0 and 1, with larger numbers giving smoother fits). We find that `span=1` (default) in *normalizeCounts* gives the best results in both broad and short epigenomic marks [@baldoni2019efficient].
+
+```{r data_norm_offset}
+# Normalizing counts
+object_normExample <- object_bam
+object_normExample <- normalizeCounts(object_normExample,
+                                      control = controlEM())
+
+normCts <- as.matrix(assay(object_normExample)/
+                       exp(assay(object_normExample,'offsets')))
+
+# Summary of raw counts
+summary(assay(object_normExample))
+colSums(assay(object_normExample))/1e5
+
+# Summary of normalized counts
+summary(normCts)
+colSums(normCts)/1e5
+```
+
+### Other types of normalization
+
+epigraHMM allows users to input their own normalization offsets via `addOffsets`, which simply adds an input matrix of normalizing offsets to a given *epigraHMMDataSet*. 
+
+For instance, one may want to add GC-content normalizing offsets, which can be obtained by from the Bioconductor package [gcapc](https://doi.org/doi:10.18129/B9.bioc.gcapc). Note that, in this case, `refineSites` will fetch data from the Bioconductor package [BSgenome.Rnorvegicus.UCSC.rn4](https://doi.org/doi:10.18129/B9.bioc.BSgenome.Rnorvegicus.UCSC.rn4), which must be installed locally. For users interested in utilizing `gcapc` for GC-content normalization, we strongly recommend them to follow the suggested analysis steps from the authors' [vignette](https://bioconductor.org/packages/release/bioc/vignettes/gcapc/inst/doc/gcapc.html).
+
+```{r gcnorm,fig.show='hide',results='hide'}
+library(gcapc)
+library(BSgenome.Rnorvegicus.UCSC.rn4)
+
+# Toy example of utilization of gcapc for GC-content normalization via model offsets
+# See ?gcapc::refineSites for best practices
+object_gcExample <- object_bam[7e4:8e4,]
+
+gcnorm <- gcapc::refineSites(counts = assay(object_gcExample),
+                             sites = rowRanges(object_gcExample),
+                             gcrange = c(0,1),
+                             genome = 'rn4')
+
+# gcapc::refineSites outputs counts/2^gce
+gcnorm_offsets <- log2((assay(object_gcExample)+1)/(gcnorm+1))
+
+# Adding offsets to epigraHMM object
+object_gcExample <- addOffsets(object = object_gcExample,
+                               offsets = gcnorm_offsets)
+```
+
+Note that `addOffsets` will add offsets to any existing offset assay contained in *epigraHMMDataSet*. That is, in the example above, the resulting offsets from the output of `addOffsets(object_gcExample,offsets = gcnorm_offsets)` will be equal to `assay(object_gcExample,'offsets') + gcnorm_offsets`.
+
+## Peak calling
+
+Peak calling, either consensus or differential, is performed in epigraHMM through the function *epigraHMM*. It takes as input an *epigraHMMDataSet* (argument `object`), a list of control parameters (argument `control`), the type of peak calling (argument `type`), and the distributional assumption for the data (argument `dist`).
+
+The argument `object` passes the *epigraHMMDataSet* to the peak calling algorithms. If either controls experiments or normalization offsets are included in the input `object`, they will be used in the analysis. Specifically, *epigraHMM* directly models controls as a covariate in the count mean model in consensus peak calling.
+
+Users can specify the type of peak calling, either consensus or differential, via the argument `type`. If `type='consensus'`, *epigraHMM* will detect enrichment regions in consensus across technical or biological replicates. It assumes that all available data stored in the *epigraHMMDataSet* is generated under the same experimental conditions (e.g. unique cell line) and the genome can be segmented into either consensus background or consensus enrichment regions. If `type='differential'`, *epigraHMM* will detect differential enrichment regions across technical or biological replicates from multiple conditions (e.g. several cell lines or knockout versus wild-type). In this case, it will assume that the genome can be segmented into regions of either consensus background, differential, or consensus enrichment.
+
+The argument `dist` specifies the probabilistic distribution for the experimental counts. The distribution can be either zero-inflated negative binomial (ZINB; `dist='zinb'`) or a negative binomial model (NB; `dist='nb'`). If `dist='zinb'`, counts from the consensus background (enrichment) hidden Markov model (HMM)  state will be modeled with a ZINB (NB). If `dist='nb'`, both consensus enrichment and background will be modeled with a NB distribution. For specific details of the model, we refer users to our publications [@baldoni2019improved] [@baldoni2019efficient]. We recommend users to specify `dist='zinb'` if consensus peak calling is of interest, as we found the ZINB to give better results in this setting. Minor differences between ZINB and NB models were observed in differential peak calling. No significant differences in computing time were observed between the ZINB and NB model specifications.
+
+The `control` argument should be a list of parameter specifications generated from the function *controlEM*. Possible tuning parameters from *controlEM* include the maximum number of EM algorithm iterations, the convergence criteria, the option to print log messages during the EM algorithm, etc. We recommend users to read the manual *controlEM* directly for all parameter specifications. For any standard analysis, either consensus or differential peak calling, we recommend users to simply pass `control=controlEM()` to *epigraHMM*.
+
+### Multi-sample single-condition analysis
+
+If one is interested in detecting consensus peaks across multiple samples (or simply detecting peaks from a single-sample) of the same condition, epigraHMM can be used with the option `type = 'consensus'` as below.
+
+```{r data_peak_consensus,message = FALSE}
+# Creating input for epigraHMM
+bamFiles <- list.files(path = system.file(package = "chromstaRData"),
+                       pattern = 'H3K27me3-BN*.*bam$',
+                       recursive = TRUE,full.names = TRUE)
+
+colData <- data.frame(condition = c('BN','BN'),
+                      replicate = c(1,2))
+
+# Creating epigraHMM object
+object_consensus <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
+                                               colData = colData,
+                                               genome = 'rn4',
+                                               windowSize = 500,
+                                               gapTrack = TRUE)
+
+# Normalizing counts
+object_consensus <- normalizeCounts(object_consensus,
+                                       control = controlEM())
+
+# Initializing epigraHMM
+object_consensus <- initializer(object_consensus,controlEM())
+
+# Differential peak calling
+object_consensus <- epigraHMM(object = object_consensus,
+                                 control = controlEM(),
+                                 type = 'consensus',
+                                 dist = 'zinb')
+```
+
+### Multi-sample, multiple-condition analysis
+
+If one is interested in detecting differential peaks across multiple samples collected under different conditions, epigraHMM can be used with the option `type = 'differential'` as below. Note that it is not mandatory for experimental conditions to have more than one technical or biological replicates. In principle, epigraHMM is able to call differential peaks under single-sample multi-condition designs. However, users are strongly encouraged to utilized as many technical/biological replicates per condition as possible in their analyses. epigraHMM provides better performance regarding sensitivity and false discovery rate (FDR) control when more replicates are utilized (see Web Figures 13-15 in [@baldoni2019efficient]).
+
+```{r data_peak_differential,message = FALSE}
+# Creating input for epigraHMM
+bamFiles <- list.files(path = system.file(package = "chromstaRData"),
+                       pattern = 'H3K27me3*.*-bio2-*.*bam$',
+                       recursive = TRUE,full.names = TRUE)
+
+colData <- data.frame(condition = c('BN','BN','SHR','SHR'),
+                      replicate = c(1,2,1,2))
+
+# Creating epigraHMM object
+object_differential <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
+                                               colData = colData,
+                                               genome = 'rn4',
+                                               windowSize = 500,
+                                               gapTrack = TRUE)
+
+# Normalizing counts
+object_differential <- normalizeCounts(object_differential,
+                                       control = controlEM())
+
+# Initializing epigraHMM
+object_differential <- initializer(object_differential,controlEM())
+
+# Differential peak calling
+object_differential <- epigraHMM(object = object_differential,
+                                 control = controlEM(),
+                                 type = 'differential',
+                                 dist = 'nb')
+```
+
+### Calling peaks
+
+Consensus or differential peaks can be called with epigraHMM's `callPeaks` function, which takes as input the *epigraHMM* object output (argument `object`). By default, the most likely (consensus or differential) peak regions are presented by `callPeaks`, which utilizes the Viterbi algorithm to this end. Alternatively, users may want to specify a particular FDR control thresholding level through the argument `method`. For example `method = 0.05` requests `callPeaks` to define peak regions while controlling for the FDR of 0.05 on the window level. Neighboring significant windows that pass a given FDR threshold level are combined to form consensus or differential regions of enrichment.
+
+```{r peaks_consensus}
+peaks_consensus <- callPeaks(object = object_consensus)
+peaks_consensus
+```
+
+```{r peaks_differential}
+peaks_differential <- callPeaks(object = object_differential)
+peaks_differential
+```
+
+## Data visualization
+
+### Plotting peak tracks
+
+Peaks can be visualized with the epigraHMM function `plotCounts`, which accepts annotation tracks to be included in the output plot. Below, we show an example on how to visualize peaks calls.
+
+First, we will fetch the UCSC gene bodies from the rn4 genome. They will be then transformed into a GRanges object to be used by epigraHMM as an annotation track.
+
+```{r viz_anno}
+library(GenomicRanges)
+library(rtracklayer)
+library(GenomeInfoDb)
+
+session <- browserSession()
+genome(session) <- 'rn4'
+refSeq <- getTable(ucscTableQuery(session,table="refGene"))
+
+annotation <- makeGRangesFromDataFrame(refSeq,
+                                       starts.in.df.are.0based = TRUE,
+                                       seqnames.field = 'chrom',
+                                       start.field = 'txStart',
+                                       end.field = 'txEnd',
+                                       strand.field = 'strand',
+                                       keep.extra.columns = TRUE)
+```
+
+To visualize the consensus or differential peak calls, one needs to provide the output of `epigraHMM` (argument `object`), the genomic coordinates to be visualized (argument `ranges`), the set of peak calls (argument `peaks`, optional), and the annotation track (argument `annotation`, optional). The resulting plot will display the peak track, the annotation track, the normalized read counts, and the posterior probabilities associated with either consensus enrichment (for consensus peaks) or differential enrichment (for differential peaks). Read counts are normalized with the normalizing offsets contained in the `epigraHMM` output object.
+
+```{r viz_consensus}
+plotCounts(object = object_consensus,
+           ranges = GRanges('chr12',IRanges(19500000,20075000)),
+           peaks = peaks_consensus,
+           annotation = annotation)
+```
+
+```{r viz_differential}
+plotCounts(object = object_differential,
+           ranges = GRanges('chr12',IRanges(19500000,20075000)),
+           peaks = peaks_differential,
+           annotation = annotation)
+```
+
+### Heatmap with posterior probabilities of differential enrichment
+
+epigraHMM uses a mixture model embedded into one of its hidden Markov model states to encode all possible combinatorial patterns of enrichment across multiple conditions. It is often of interest to determine not only whether a peak is differential or not, but also to classify its association with enrichment to a particular treatment condition of interest. For example, in the example above, one may want to determine whether a differential peak is actually representing an enrichment of read counts in the SHR condition. In a more general example with three conditions, one may want to determine which combinatorial pattern out of all six possible patterns of differential enrichment ($2^3 -2$) is the one associated with differential peak.
+
+epigraHMM provides the function `plotPatterns`, which plot the posterior probabilities associated with each mixture model component from the HMM-embedded epigraHMM's mixture model. In the example below, we are interested in determining the direction of enrichment between the BN and SHR conditions of the third peak (from left to right) illustrated in the figure above.
+
+```{r viz_heatmap1}
+# Selecting target differential peak
+pattern_peak <- peaks_differential[peaks_differential$name == 'peak9']
+
+plotPatterns(object = object_differential,
+             ranges = pattern_peak)
+```
+
+As one can see, all genomic windows pertaining to the differential peaks were associated with read enrichment in condition SHR. 
+Alternatively, one could also be interested in the second differential peak from the figure of the previous section. In this case, the differential peak has genomic windows mostly associated with the condition BN.
+```{r viz_heatmap2}
+# Selecting target differential peak
+pattern_peak <- peaks_differential[peaks_differential$name == 'peak8']
+
+plotPatterns(object = object_differential,
+             ranges = pattern_peak)
+```
+
+# Theory
+
+## Model overview
+
+epigraHMM implements the statistical models presented in @baldoni2019improved (consensus peak calling) and @baldoni2019efficient (differential peak calling).
+
+For consensus peak detection, epigraHMM utilizes a 2-state HMM with state-specific parametrization of the form:
+
+$$ Y_{ij} \sim \textrm{ZINB}(\rho_{ij},\mu_{2ij}, \phi_1) \quad (background~state) $$
+$$ Y_{ij} \sim \textrm{NB}(\mu_{2ij}, \phi_2) \quad (enrichment~state) $$
+$$ \log(\rho_{ij}/(1-\rho_{ij})) = \alpha + u_{ij}$$
+$$ \log(\mu_{hij}) = \beta_{h}+u_{ij},\quad h\in\{1,2\}$$
+$$ \log(\phi_h) = \gamma_{h},\quad h\in\{1,2\}$$
+where the read counts $Y_{ij}$ for replicate $i$ and genomic window $j$ are modeled either using a zero-inflated negative binomial (ZINB, background state, $h=1$) or negative binomial distribution (NB, enrichment state, $h=2$) with zero-inflation probability $\rho_{ij}$, mean $\mu_{hij}$, and dispersions $\phi_{h}$, $h\in\{1,2\}$. The coefficient $\beta_{h}$ gives the log average count of windows associated with the HMM state $h$. If input controls experiments are available, they will be included in both HMM state mean models. The parametrization utilized by epigraHMM is such that larger values of $\phi_{h}$ are associated with lower overdispersion level in the data (i.e. $Var_{h}(Y_{ij})=\mu_{hij}(1+\mu_{hij}/\phi_{h})$).
+
+For differential peak detection across a number of $G$ conditions, epigraHMM utilizes a 3-state HMM to model consensus background ($h=1$), differential ($h=2$), and consensus enrichment ($h=3$) windows. In this case, the parametrization of consensus background/enrichment states is equal to the parametrization used in the HMM background and enrichment states presented for consensus peak calling model above. For differential windows, however, a mixture model with $2^G-2$ components is used to model all possible differential combinatorial patterns of enrichment across $G$ conditions. Parameters from the mixture model differential state ($h=2$) are shared with those from the consensus background and enrichment states ($h\in\{1,3\}$). See @baldoni2019efficient for more details about the differential peak calling model.
+
+Upon convergence of the rejection controlled EM algorithm, posterior probabilities associated with HMM states are used to call either consensus peaks or differential peaks. For differential peak calling, mixture model posterior proportions can be used to classify differential windows according to their most likely associated differential combinatorial pattern.
+
+
+# Session info
+
+```{r sessioninfo}
+sessionInfo()
+```
+
+# References
