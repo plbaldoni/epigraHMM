@@ -84,12 +84,15 @@ callPeaks = function(object,
 
     # Summarize the output
     gr.bed$name <- paste0(paste0('peak',seq_len(length(gr.bed))))
-    gr.bed$score <- 1000*data.table::as.data.table(IRanges::findOverlaps(gr.bed,SummarizedExperiment::rowRanges(object)))[,mean(prob[subjectHits]),by='queryHits']$V1
-    gr.bed$thickStart <- GenomicRanges::start(gr.bed)
-    gr.bed$thickEnd <- GenomicRanges::end(gr.bed)
 
     # File names
     if(saveToFile){
+        
+        # Adding necessary columns for browser
+        gr.bed$score <- 1000*data.table::as.data.table(IRanges::findOverlaps(gr.bed,SummarizedExperiment::rowRanges(object)))[,mean(prob[subjectHits]),by='queryHits']$V1
+        gr.bed$thickStart <- GenomicRanges::start(gr.bed)
+        gr.bed$thickEnd <- GenomicRanges::end(gr.bed)
+        
         chrset <- as.character(unique(SummarizedExperiment::seqnames(SummarizedExperiment::rowRanges(object))))
 
         filenames <- vapply(file.path(path.expand(control[['tempDir']]),paste0(control[['fileName']],'_',c('peaks.bed',paste0('prob_',chrset,'.wig')))),checkPath,FUN.VALUE = 'character',USE.NAMES = FALSE)
