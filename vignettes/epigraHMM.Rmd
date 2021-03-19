@@ -277,7 +277,7 @@ object_differential <- epigraHMM(object = object_differential,
 
 ### Calling peaks
 
-Consensus or differential peaks can be called with epigraHMM's `callPeaks` function, which takes as input the *epigraHMM* object output (argument `object`). By default, the most likely (consensus or differential) peak regions are presented by `callPeaks`, which utilizes the Viterbi algorithm to this end. Alternatively, users may want to specify a particular FDR control thresholding level through the argument `method`. For example `method = 0.05` requests `callPeaks` to define peak regions while controlling for the FDR of 0.05 on the window level. Neighboring significant windows that pass a given FDR threshold level are combined to form consensus or differential regions of enrichment.
+Consensus or differential peaks can be called with epigraHMM's `callPeaks` function, which takes as input the *epigraHMM* object output (argument `object`). By default, the most likely (consensus or differential) peak regions are presented by `callPeaks`, which utilizes the Viterbi algorithm to this end. Alternatively, users may want to specify a particular FDR control thresholding level through the argument `method`. For example `method = 0.05` requests `callPeaks` to define peak regions while controlling for the FDR of 0.05 on the window level. Neighboring significant windows that pass a given FDR threshold level are merged to form consensus or differential regions of enrichment.
 
 ```{r peaks_consensus}
 peaks_consensus <- callPeaks(object = object_consensus)
@@ -333,9 +333,9 @@ plotCounts(object = object_differential,
 
 ### Heatmap with posterior probabilities of differential enrichment
 
-epigraHMM uses a mixture model embedded into one of its hidden Markov model states to encode all possible combinatorial patterns of enrichment across multiple conditions. It is often of interest to determine not only whether a peak is differential or not, but also to classify its association with enrichment to a particular treatment condition of interest. For example, in the example above, one may want to determine whether a differential peak is actually representing an enrichment of read counts in the SHR condition. In a more general example with three conditions, one may want to determine which combinatorial pattern out of all six possible patterns of differential enrichment ($2^3 -2$) is the one associated with differential peak.
+epigraHMM uses a mixture model embedded into one of its hidden Markov model states to encode all possible combinatorial patterns of enrichment across multiple conditions. It is often of interest to determine not only whether a peak is differential or not, but also to classify its association with enrichment to a particular treatment condition or any combination of them. For example, in the example above, one may want to determine whether a differential peak is actually representing an enrichment of read counts in the SHR condition. In a more general example with three conditions, one may want to determine which combinatorial pattern out of all six possible patterns of differential enrichment ($2^3 -2$) is the one associated with a differential peak.
 
-epigraHMM provides the function `plotPatterns`, which plot the posterior probabilities associated with each mixture model component from the HMM-embedded epigraHMM's mixture model. In the example below, we are interested in determining the direction of enrichment between the BN and SHR conditions of the third peak (from left to right) illustrated in the figure above.
+epigraHMM provides the function `plotPatterns`, which plots a heatmap with the posterior probabilities associated with each mixture model component from the HMM-embedded epigraHMM's mixture model. In the example below, we are interested in determining the direction of enrichment between the BN and SHR conditions of the third peak (from left to right) illustrated in the figure of the previous section.
 
 ```{r viz_heatmap1}
 # Selecting target differential peak
@@ -346,7 +346,7 @@ plotPatterns(object = object_differential,
 ```
 
 As one can see, all genomic windows pertaining to the differential peaks were associated with read enrichment in condition SHR. 
-Alternatively, one could also be interested in the second differential peak from the figure of the previous section. In this case, the differential peak has genomic windows mostly associated with the condition BN.
+Alternatively, one could also be interested in the second differential peak from the figure of the previous section (from left to right). In this case, the differential peak is formed by genomic windows mostly associated with read count enrichment in condition BN.
 ```{r viz_heatmap2}
 # Selecting target differential peak
 pattern_peak <- peaks_differential[peaks_differential$name == 'peak8']
