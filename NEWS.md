@@ -1,4 +1,4 @@
-# epigraHMM 1.0.0
+# epigraHMM 0.99.0
 
 * First release of epigraHMM.
 
