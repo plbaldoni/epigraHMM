@@ -42,10 +42,11 @@ Encoding: UTF-8
 SystemRequirements: GNU make
 Suggests: 
     testthat,
-    chromstaRData,
     knitr,
     rmarkdown,
     BiocStyle,
     BSgenome.Rnorvegicus.UCSC.rn4,
-    gcapc
+    gcapc,
+    chipseqDBData,
+    chromstaRData
 VignetteBuilder: knitr
