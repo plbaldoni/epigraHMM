@@ -292,7 +292,7 @@ estimateCoefficients <- function(z,dt,dist,type,control){
     
     parList <- lapply(range(z),function(x){
         subpar <- dt[Window %in% which(z == x),list(mu = mean((ChIP+1)/exp(offsets)),sigma2 = stats::var((ChIP+1)/exp(offsets)))]
-        subpar[,c(zip = (sigma2-mu)/(sigma2+mu^2-mu),mu = mu,disp = min((mu^2)/max(0,sigma2-mu),control[['maxDisp']]))]
+        subpar[,c(zip = max(0.01,(sigma2-mu)/(sigma2+mu^2-mu)),mu = mu,disp = min((mu^2)/max(0,sigma2-mu),control[['maxDisp']]))]
     })
     
     par <- list()
