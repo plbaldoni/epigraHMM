@@ -47,6 +47,5 @@ Suggests:
     BiocStyle,
     BSgenome.Rnorvegicus.UCSC.rn4,
     gcapc,
-    chipseqDBData,
     chromstaRData
 VignetteBuilder: knitr
