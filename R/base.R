@@ -929,7 +929,7 @@ consensusHMM = function(object,control,dist)
     dt <- data.table::data.table(Window = rep(seq_len(M),N),ChIP = as.numeric(assay(object)),offsets = as.numeric(assay(object,'offsets')))
     if('controls' %in% SummarizedExperiment::assayNames(object)){
         # Adding control & keying
-        dt[,controls := as.numeric(assay(object,'controls'))]
+        dt[,controls := as.numeric(log1p(assay(object,'controls')))]
         dt[,Group := .GRP,by = c('ChIP','controls','offsets')]
         
         # Creating unique data.table
