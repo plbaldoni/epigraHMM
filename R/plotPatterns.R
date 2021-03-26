@@ -77,7 +77,7 @@ plotPatterns = function(object,
     postprob <- rhdf5::h5read(hdf5,'mixtureProb')
     patterns <- rhdf5::h5read(hdf5,'mixturePatterns')
     patterns <- unlist(lapply(patterns,function(x){paste(unique(object$condition)[as.numeric(gregexpr('E',x)[[1]])],collapse = '-')}))
-    
+
     # Subsetting
     if (methods::is(ranges)[1] == "GRanges") {
         sub_index <- overlapsAny(object, ranges)
@@ -101,17 +101,17 @@ plotPatterns = function(object,
         stop('Insufficient number of colors. Please provide ',ncol(sub_postprob),' different colors.')
     }
         
-    anno_colors <- list(Enrichment = colors[seq_len(ncol(sub_postprob))])
-    names(anno_colors$Enrichment) <- colnames(sub_postprob)
+    anno_colors <- list('Pattern' = colors[seq_len(ncol(sub_postprob))])
+    names(anno_colors[['Pattern']]) <- colnames(sub_postprob)
     
     # Plotting
     pheatmap::pheatmap(sub_postprob,
                        color = grDevices::colorRampPalette(c(4, "white", 2))(256),
-                       annotation_col = data.frame('Enrichment' = colnames(sub_postprob),
+                       annotation_col = data.frame('Pattern' = colnames(sub_postprob),
                                                    row.names = colnames(sub_postprob)),
                        annotation_colors = anno_colors,
                        cluster_rows = FALSE,cluster_cols = FALSE,angle_col = 45,
-                       main = paste0('Differential Pattern Posterior Probability\n(',
+                       main = paste0('Differential Enrichment Pattern\nPosterior Probability\n(',
                                      unique(seqnames(sub_object)),':',
                                      scales::comma(min(start(sub_object))),'-',
                                      scales::comma(max(end(sub_object))),')'),
