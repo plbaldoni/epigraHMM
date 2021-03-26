@@ -2,7 +2,7 @@
 
 * First release of epigraHMM.
 
-* It is not possible to add normalizing offsets via `addOffsets`.
+* It is now possible to add normalizing offsets via `addOffsets`.
 
 * epigraHMM now uses hdf5 files to store all intermediate data during computation
 of the EM algorithm. Intermediate data include window-based HMM and mixture model 
