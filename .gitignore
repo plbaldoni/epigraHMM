@@ -4,7 +4,6 @@
 *.Rproj
 .DS_Store
 vignettes/.gitignore
-README.Rmd
 
 # Default ignores
 
