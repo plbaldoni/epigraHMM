@@ -20,8 +20,9 @@ epigenomic mark (differential peak calling) or across multiple
 epigenomic marks from a single condition (genomic segmentation). The
 data pre-processing steps are heavily integrated with other Bioconductor
 packages and allow the user to transform sequencing/alignment files into
-count matrices that are suitable for the final analysis of the data. The
-current implementation is optimized for genome-wide analyses of
+count matrices that are suitable for the final analysis of the data.
+
+The current implementation is optimized for genome-wide analyses of
 epigenomic data and is efficient for the analysis under multi-sample
 multiple-condition settings, as well as consensus peak calling in
 multi-sample single-condition settings. epigraHMM uses two modified
