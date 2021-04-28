@@ -120,71 +120,53 @@ epigraHMMDataSetFromBam <- function(bamFiles,
     }
     
     # Setting up reference genome
-    if(methods::is(genome)[1]=="GRanges"){
-        gr.genome <- unlist(GenomicRanges::tile(genome,width = windowSize))
-    } else{
-        if(is.character(genome)){
-            chrlist <- Reduce(intersect,lapply(bamFiles[['counts']],FUN = function(x){unique(as.character(Rsamtools::scanBam(x,param = Rsamtools::ScanBamParam(what = "rname"))[[1]]$rname))}))
-
-            # Tiling up the specified genome
-            gr.seqinfo <- GenomeInfoDb::Seqinfo(genome=genome)
-            gr.genome <- GenomicRanges::tileGenome(seqlengths = gr.seqinfo,tilewidth = windowSize,cut.last.tile.in.chrom = TRUE)
-            gr.genome <- gr.genome[S4Vectors::decode(GenomeInfoDb::seqnames(gr.genome))%in%chrlist]
-        } else{
-            stop('The argument genome must be either a single string with the name of the reference genome (e.g. "hg19") or a "GRanges" object')
-        }
-    }
+    genomeList <- getGenome(genome,windowSize,bamFiles)
+    gr.genome <- genomeList[['genome']]
     
     # Setting up gap track
-    if(gapTrack == TRUE & is.character(genome)){
-        # Gap table
-        session <- rtracklayer::browserSession()
-        GenomeInfoDb::genome(session) <- genome
-        gr.gaps <- GenomicRanges::makeGRangesFromDataFrame(
-            df = data.table::as.data.table(rtracklayer::getTable(rtracklayer::ucscTableQuery(session,table="gap")))[chrom%in%unique(seqnames(gr.seqinfo)),],
-            seqinfo = gr.seqinfo,
-            starts.in.df.are.0based = TRUE)
-    } else{
-        if(methods::is(gapTrack)[1]=="GRanges"){
-            gr.gaps <- gapTrack
-        } else{
-            gr.gaps <- GenomicRanges::GRanges()
-        }
-    }
+    gr.gaps <- getGap(gapTrack,genome,genomeList[['seqinfo']])
     
     # Setting up blacklist track
-    if(blackList == TRUE & is.character(genome) & RCurl::url.exists(paste0('https://github.com/Boyle-Lab/Blacklist/raw/master/lists/',genome,'-blacklist.v2.bed.gz'))){
-        gr.blackList <- GenomicRanges::trim(GenomicRanges::makeGRangesFromDataFrame(df = data.table::as.data.table(rtracklayer::import(rtracklayer::BEDFile(paste0('https://github.com/Boyle-Lab/Blacklist/raw/master/lists/',genome,'-blacklist.v2.bed.gz')))),
-                                                                                    seqinfo = GenomeInfoDb::Seqinfo(genome=genome)))
-    } else{
-        if(methods::is(blackList)[1]=="GRanges"){
-            gr.blackList <- blackList
-        } else{
-            gr.blackList <- GenomicRanges::GRanges()
-        }
-    }
+    gr.blackList <- getList(blackList,genome)
     
     # Cleaning up the genome
     gr.genome <- gr.genome[!IRanges::overlapsAny(gr.genome,IRanges::union(gr.gaps,gr.blackList))]
     
     # Estimating the fragment length
-    colData$fragLength <- unlist(lapply(seq_len(nrow(colData)),function(x){
-        csaw::maximizeCcf(csaw::correlateReads(bam.files = bamFiles[['counts']][x],param=csaw::readParam(discard=IRanges::union(gr.gaps,gr.blackList))))
-    }))
+    colData$fragLength <- getFragLen(bamFiles,gr.gaps,gr.blackList)
     
     # Computing read counts and adding to the output
-    epigraHMMDataSet <- SummarizedExperiment::SummarizedExperiment(assays = list(counts = matrix(do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){return(bamsignals::bamCount(bampath = bamFiles[['counts']][x],gr = gr.genome,verbose = FALSE,shift = colData[['fragLength']][x]/2))})),
-                                                                                                 byrow = FALSE,nrow = length(gr.genome),ncol = nrow(colData),dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))),
+    ctMat <- do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){
+        return(bamsignals::bamCount(bampath = bamFiles[['counts']][x],
+                                    gr = gr.genome,
+                                    verbose = FALSE,
+                                    shift = colData[['fragLength']][x]/2))
+    }))
+    
+    ctMat <- matrix(ctMat,
+                    byrow = FALSE,
+                    nrow = length(gr.genome),
+                    ncol = nrow(colData),
+                    dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))
+    
+    epigraHMMDataSet <- SummarizedExperiment::SummarizedExperiment(assays = list(counts = ctMat),
                                                                    rowRanges = gr.genome,
                                                                    colData = colData)
     
     # Adding offsets
-    epigraHMMDataSet <- addOffsets(epigraHMMDataSet,Matrix::Matrix(0,nrow = nrow(epigraHMMDataSet),ncol = ncol(epigraHMMDataSet),sparse = TRUE))
+    epigraHMMDataSet <- addOffsets(epigraHMMDataSet,
+                                   Matrix::Matrix(0,nrow = nrow(epigraHMMDataSet),
+                                                  ncol = ncol(epigraHMMDataSet),
+                                                  sparse = TRUE))
     
     # If there are controls, repeat
     if(!length(names(bamFiles)[-which(names(bamFiles)=='counts')]) == 0){
         for(idx in names(bamFiles)[-which(names(bamFiles)=='counts')]){
-            tmp <- do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){return(bamsignals::bamCount(bampath = bamFiles[[idx]][x],gr = gr.genome,verbose = FALSE))}))
+            tmp <- do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){
+                return(bamsignals::bamCount(bampath = bamFiles[[idx]][x],
+                                            gr = gr.genome,
+                                            verbose = FALSE))
+            }))
             dimnames(tmp) <- dimnames(SummarizedExperiment::assay(epigraHMMDataSet,'counts'))
             SummarizedExperiment::assay(epigraHMMDataSet,idx) <- tmp
         }
@@ -192,11 +174,8 @@ epigraHMMDataSetFromBam <- function(bamFiles,
     }
     
     # Sorting the object
-    if(!all(base::order(SummarizedExperiment::colData(epigraHMMDataSet)[,c('condition','replicate')],decreasing = FALSE)==seq_len(nrow(SummarizedExperiment::colData(epigraHMMDataSet))))){
-        epigraHMMDataSet <- epigraHMMDataSet[,base::order(SummarizedExperiment::colData(epigraHMMDataSet)[,c('condition','replicate')],decreasing = FALSE)]
-        message("Rows of colData have been sorted with respect to conditions (and replicates). The resulting colData is:")
-        message(paste0(utils::capture.output(SummarizedExperiment::colData(epigraHMMDataSet)), collapse = "\n"))
-    }
+    
+    epigraHMMDataSet <- sortObject(epigraHMMDataSet)
     
     return(epigraHMMDataSet)
 }
