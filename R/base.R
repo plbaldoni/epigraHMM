@@ -1,22 +1,183 @@
 ################################################################################
+### Write bedGraph file
+################################################################################
+
+writeBedGraph <- function(dt.bed,dt.bedgraph,control,mixProbSet,filenames){
+    utils::write.table(dt.bedgraph,file=file.path(control[['tempDir']],"temp.bed"),row.names = FALSE,col.names = FALSE,quote = FALSE,sep="\t")
+    header1 = paste0('track type=bedGraph name="epigraHMM(mixProb:',mixProbSet,')" description="','Probability','" visibility=full maxHeightPixels=128:32:11 graphType=bar autoScale=off alwaysZero=on viewLimits=0.0:1.0')
+    header2 = paste0('browser position ',dt.bed[1,'chrom'],':',dt.bed[1,'chromStart'],'-',dt.bed[1,'chromEnd'])
+    
+    system2('echo',paste0(header2,' | cat - ',file.path(control[['tempDir']],"temp.bed"),' > ',file.path(control[['tempDir']],"temp1.bed")))
+    system2('echo',paste0(header1,' | cat - ',file.path(control[['tempDir']],"temp1.bed"),' > ',as.character(filenames[mixProbSet])))
+    system2('rm',paste(file.path(control[['tempDir']],"temp.bed"),file.path(control[['tempDir']],"temp1.bed")))
+}
+
+################################################################################
+### Write WIG file
+################################################################################
+
+writeWig <- function(object,chrset,dt.bigwig,control,filenames){
+    for(i in chrset){
+        dt.bigwig.subset <- dt.bigwig[dt.bigwig$chrom==i,]
+        
+        utils::write.table(dt.bigwig.subset[,c('chromStart','prob')],
+                           file=file.path(control[['tempDir']],"temp.bed"),row.names = FALSE,col.names = FALSE,quote = FALSE,sep="\t")
+        header1 = paste0('track type=wiggle_0 name="epigraHMM(prob:',i,')" description="','Probability','" visibility=full maxHeightPixels=128:32:11 graphType=bar autoScale=off alwaysZero=on viewLimits=0.0:1.0')
+        header2 = paste0('browser position ',dt.bigwig.subset[1,'chrom'],':',dt.bigwig.subset[1,'chromStart'],'-',dt.bigwig.subset[10,'chromStart'])
+        header3 = paste0('variableStep chrom=',i)
+        
+        system2('echo',paste0(header3,' | cat - ',file.path(control[['tempDir']],"temp.bed"),' > ',file.path(control[['tempDir']],"temp1.bed")))
+        system2('echo',paste0(header1,' | cat - ',file.path(control[['tempDir']],"temp1.bed"),' > ',file.path(control[['tempDir']],"temp2.bed")))
+        system2('echo',paste0(header2,' | cat - ',file.path(control[['tempDir']],"temp2.bed"),' > ',as.character(filenames[paste0('prob_',i)])))
+        system2('rm',paste(file.path(control[['tempDir']],"temp.bed"),file.path(control[['tempDir']],"temp1.bed"),file.path(control[['tempDir']],"temp2.bed")))
+        
+        tryCatch({
+            rtracklayer::wigToBigWig(x = filenames[paste0('prob_',i)],seqinfo = GenomeInfoDb::seqinfo(SummarizedExperiment::rowRanges(object)))
+            system2("rm",filenames[paste0('prob_',i)])
+        },error = function(x){message("It was not possible to convert wig files to BigWig format because the input object has no specified genome")})
+    }
+}
+
+################################################################################
+### Write BED file
+################################################################################
+
+writeBed <- function(dt.bed,control,method,filenames){
+    utils::write.table(dt.bed,file=file.path(control[['tempDir']],"temp.bed"),row.names = FALSE,col.names = FALSE,quote = FALSE,sep="\t")
+    header1 <- paste0('track name="epigraHMM" description="',ifelse(method == 'viterbi','Viterbi Peaks',paste0('FDR-controlled Peaks (FDR = ',method,')')),'" visibility=1 useScore=1')
+    header2 <- paste0('browser position ',dt.bed[1,'chrom'],':',dt.bed[1,'chromStart'],'-',dt.bed[1,'chromEnd'])
+    
+    system2('echo',paste0(header2,' | cat - ',file.path(control[['tempDir']],"temp.bed"),' > ',file.path(control[['tempDir']],"temp1.bed")))
+    system2('echo',paste0(header1,' | cat - ',file.path(control[['tempDir']],"temp1.bed"),' > ',as.character(filenames['peaks'])))
+    system2('rm',paste(file.path(control[['tempDir']],"temp.bed"),file.path(control[['tempDir']],"temp1.bed")))
+}
+
+################################################################################
+### Sort object
+################################################################################
+
+sortObject = function(epigraHMMDataSet){
+    cData <- SummarizedExperiment::colData(epigraHMMDataSet)
+    oData <- base::order(cData[,c('condition','replicate')],decreasing = FALSE)
+    if(!all(oData==seq_len(nrow(cData)))){
+        epigraHMMDataSet <- epigraHMMDataSet[,oData]
+        message("Rows of colData have been sorted with respect to conditions (and replicates). The resulting colData is:")
+        message(paste0(utils::capture.output(SummarizedExperiment::colData(epigraHMMDataSet)), collapse = "\n"))
+    }   
+    return(epigraHMMDataSet)
+}
+
+################################################################################
+### Get fragment length
+################################################################################
+
+getFragLen <- function(bamFiles,gr.gaps,gr.blackList){
+    gr.discard <- IRanges::union(gr.gaps,gr.blackList)
+    fragList <- lapply(seq_len(length(bamFiles[['counts']])),function(x){
+        fragCorr <- csaw::correlateReads(bam.files = bamFiles[['counts']][x],
+                                         param=csaw::readParam(discard=gr.discard))
+        return(csaw::maximizeCcf(fragCorr))
+    })
+    return(unlist(fragList))
+}
+
+################################################################################
+### Get genome
+################################################################################
+
+getGenome <- function(genome,windowSize,bamFiles){
+    if(methods::is(genome)[1]=="GRanges"){
+        gr.genome <- unlist(GenomicRanges::tile(genome,width = windowSize))
+        return(list('genome' = gr.genome,
+                    'seqinfo' = NULL))
+    } else{
+        if(is.character(genome)){
+            chrlist <- Reduce(intersect,lapply(bamFiles[['counts']],FUN = function(x){
+                chrVal <- Rsamtools::scanBam(x,param = Rsamtools::ScanBamParam(what = "rname"))[[1]]$rname
+                return(unique(as.character(chrVal)))
+            }))
+            
+            # Tiling up the specified genome
+            gr.seqinfo <- GenomeInfoDb::Seqinfo(genome=genome)
+            
+            gr.genome <- GenomicRanges::tileGenome(seqlengths = gr.seqinfo,
+                                                   tilewidth = windowSize,
+                                                   cut.last.tile.in.chrom = TRUE)
+            
+            gr.genome <- gr.genome[S4Vectors::decode(GenomeInfoDb::seqnames(gr.genome))%in%chrlist]
+            
+            return(list('genome' = gr.genome,
+                        'seqinfo' = gr.seqinfo))
+        } else{
+            stop('The argument genome must be either a single string with the name of the reference genome (e.g. "hg19") or a "GRanges" object')
+        }
+    }
+}
+
+################################################################################
+### Get blacklist
+################################################################################
+
+getList <- function(blackList,genome){
+    if(!methods::is(blackList)[1]=="GRanges"){
+        urlList <- paste0('https://github.com/Boyle-Lab/Blacklist/raw/master/lists/',genome,'-blacklist.v2.bed.gz')
+        if(isTRUE(blackList) & is.character(genome) & RCurl::url.exists(urlList)){
+            dt.blackList <- data.table::as.data.table(rtracklayer::import(rtracklayer::BEDFile(urlList)))
+            
+            gr.blackList <- GenomicRanges::makeGRangesFromDataFrame(df = dt.blackList,
+                                                                    seqinfo = GenomeInfoDb::Seqinfo(genome=genome))
+            
+            gr.blackList <- GenomicRanges::trim(gr.blackList)
+        } else {
+            gr.blackList <- GenomicRanges::GRanges()
+        }
+    } else{
+        gr.blackList <- blackList 
+    }
+
+    return(gr.blackList)
+}
+
+################################################################################
+### Get UCSC gap track
+################################################################################
+
+getGap <- function(gapTrack,genome,gr.seqinfo = NULL){
+    
+    chrom <- NULL
+    
+    if(!methods::is(gapTrack)[1]=="GRanges"){
+        if(isTRUE(gapTrack) & is.character(genome)){
+            # Gap table
+            session <- rtracklayer::browserSession()
+            GenomeInfoDb::genome(session) <- genome
+            
+            dt.gaps <- rtracklayer::getTable(rtracklayer::ucscTableQuery(session,table="gap"))
+            dt.gaps <- data.table::as.data.table(dt.gaps)
+            
+            gr.gaps <- GenomicRanges::makeGRangesFromDataFrame(
+                df = dt.gaps[chrom%in%unique(seqnames(gr.seqinfo)),],
+                seqinfo = gr.seqinfo,
+                starts.in.df.are.0based = TRUE)
+        } else{
+            gr.gaps <- GenomicRanges::GRanges()
+        }
+
+    } else{
+        gr.gaps <- gapTrack
+    }
+    return(gr.gaps)
+}
+
+################################################################################
 ### Check consistency of arguments in plotCounts.R
 ################################################################################
 
 checkPlot = function(x,ranges){
     if (!is.null(x)) {
-        if (!((
-            methods::is(ranges)[1] == "GRanges" &
-            methods::is(x)[1] == "GRanges"
-        ) |
-        (
-            methods::is(ranges)[1] %in% c("integer", "numeric") &
-            methods::is(x)[1] == "logical"
-        )
-        )) {
-            stop(
-                'If ranges is a GRanges object, then peaks/annotation must also be a GRanges object.
-                 If ranges is a numeric vector object, then peaks/annotation must be a vector of logicals'
-            )
+        if (!((methods::is(ranges)[1] == "GRanges" & methods::is(x)[1] == "GRanges") | 
+              (methods::is(ranges)[1] %in% c("integer", "numeric") & methods::is(x)[1] == "logical"))) {
+            stop('If ranges is a GRanges object, then peaks/annotation must also be a GRanges object. If ranges is a numeric vector object, then peaks/annotation must be a vector of logicals')
         }
     }
 }
@@ -29,10 +190,10 @@ estimateTransitionProb = function(chain,numStates){
     if(max(chain)>(numStates-1)){
         chain=round((numStates-1)*(chain-max(chain))/(max(chain)-min(chain))+(numStates-1))
     }
-    MC = matrix(chain,nrow = 1,ncol=length(chain))
-    MC = table(c(MC[,-ncol(MC)]),c(MC[,-1]))
-    MC = as.matrix(MC/rowSums(MC))
-    MC = matrix(MC,ncol=ncol(MC),nrow=nrow(MC),byrow=FALSE)
+    MC <- matrix(chain,nrow = 1,ncol=length(chain))
+    MC <- table(c(MC[,-ncol(MC)]),c(MC[,-1]))
+    MC <- as.matrix(MC/rowSums(MC))
+    MC <- matrix(MC,ncol=ncol(MC),nrow=nrow(MC),byrow=FALSE)
     return(checkProbabilities(MC))
 }
 
@@ -41,8 +202,10 @@ estimateTransitionProb = function(chain,numStates){
 ################################################################################
 
 checkProbabilities = function(P){
-    P = pmax(pmin(P,1),0)
-    if(sum(P==0)>0){P[P==0] = .Machine$double.xmin}
+    P <- pmax(pmin(P,1),0)
+    if(sum(P==0)>0){
+        P[P==0] <- .Machine$double.xmin
+    }
     return(P/rowSums(P))
 }
 
@@ -51,14 +214,22 @@ checkProbabilities = function(P){
 ################################################################################
 
 glmNB = function(par,y,x,offset,weights){
-    l = stats::dnbinom(y,mu=exp(x%*%par[seq_len(ncol(x))]+offset),size=1/par[length(par)],log=TRUE);l[is.infinite(l)] = log(1e-300)
+    mu.vec <- exp(x%*%par[seq_len(ncol(x))]+offset)
+    l <- stats::dnbinom(y,mu=mu.vec,size=1/par[length(par)],log=TRUE)
+    l[is.infinite(l)] <- log(1e-300)
     return(-sum(weights*l))
 }
 
 derivNB = function(par,y,x,offset,weights){
     mu.vec = exp(x%*%par[seq_len(ncol(x))]+offset)
-    return(-c(colSums(as.numeric(weights)*as.numeric((y-mu.vec)/(1+par[length(par)]*mu.vec))*x),
-              sum(as.numeric(weights)*(log(1+par[length(par)]*mu.vec)+par[length(par)]*(y-mu.vec)/(1+par[length(par)]*mu.vec)-digamma(y+1/par[length(par)])+digamma(1/par[length(par)]))/(par[length(par)]^2))))
+    
+    dldbeta <- colSums(as.numeric(weights)*as.numeric((y-mu.vec)/(1+par[length(par)]*mu.vec))*x)
+    dldphi <- sum(as.numeric(weights)*(log(1+par[length(par)]*mu.vec) + 
+                                           par[length(par)]*(y-mu.vec)/(1+par[length(par)]*mu.vec) - 
+                                           digamma(y+1/par[length(par)]) + 
+                                           digamma(1/par[length(par)]))/(par[length(par)]^2))
+    
+    return(-c(dldbeta,dldphi))
 }
 
 ################################################################################
@@ -70,7 +241,10 @@ glmZINB = function(par,y,x,offset,weights,minZero){
     zeroinfl.vec <- 1/(1+exp(-(x%*%par[(ncol(x)+2):(2*ncol(x)+1)]+offset)))
     idx.Y0 <- (y==0)
     
-    return(-sum(weights*(idx.Y0*log(zeroinfl.vec+exp(log(1-zeroinfl.vec)+log(stats::dnbinom(0,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)))+(1-idx.Y0)*(log(1-zeroinfl.vec)+log(stats::dnbinom(y,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)))))
+    l0 <- log(zeroinfl.vec+exp(log(1-zeroinfl.vec) +log(stats::dnbinom(0,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)))
+    l1 <- log(1-zeroinfl.vec)+log(stats::dnbinom(y,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)
+    
+    return(-sum(weights*(idx.Y0*l0+(1-idx.Y0)*l1)))
 }
 
 derivZINB = function(par,y,x,offset,weights,minZero){
@@ -79,18 +253,25 @@ derivZINB = function(par,y,x,offset,weights,minZero){
     zeroinfl.vec <- 1/(1+exp(-(x%*%par[(ncol(x)+2):(2*ncol(x)+1)]+offset)))
     idx.Y0 <- (y==0)
     
-    l0 = log(stats::dnbinom(0,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)
-    l1 = log(stats::dnbinom(y,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)
+    l0 <- log(stats::dnbinom(0,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)
+    l1 <- log(stats::dnbinom(y,mu=mu.vec,size=1/par[(ncol(x)+1)],log=FALSE)+minZero)
     
-    P0 = zeroinfl.vec+exp(log(1-zeroinfl.vec)+l0)
-    P1 = exp(log(1-zeroinfl.vec)+l1)
+    P0 <- zeroinfl.vec+exp(log(1-zeroinfl.vec)+l0)
+    P1 <- exp(log(1-zeroinfl.vec)+l1)
     
-    phi = par[(ncol(x)+1)]
-    aux = (1+phi*mu.vec)
+    phi <- par[(ncol(x)+1)]
+    aux <- (1+phi*mu.vec)
     
-    return(c(-colSums(as.numeric((idx.Y0)*(weights/P0)*(1-zeroinfl.vec)*(-mu.vec*((1+phi*mu.vec)^(-(1/phi+1)))))*x+as.numeric((1-idx.Y0)*(weights/P1)*(1-zeroinfl.vec)*exp(l1)*(y-mu.vec)/(1+phi*mu.vec))*x),
-             -sum((idx.Y0)*(weights/P0)*(1-zeroinfl.vec)*(aux^(-1/phi))*(log(aux)/((phi)^2)-mu.vec/(phi*aux))+(1-idx.Y0)*(weights/P1)*(1-zeroinfl.vec)*exp(l1)*(log(aux)/(phi^2)-mu.vec*(y+1/phi)/aux-digamma(y+1/phi)/(phi^2)+digamma(1/phi)/(phi^2)+y/phi)),
-             -colSums(as.numeric((idx.Y0)*(weights/P0)*(1-exp(l0))*zeroinfl.vec*(1-zeroinfl.vec))*x+as.numeric((1-idx.Y0)*(weights/P1)*(-exp(l1))*zeroinfl.vec*(1-zeroinfl.vec))*x)))
+    dldb1 <- as.numeric((idx.Y0)*(weights/P0)*(1-zeroinfl.vec)*(-mu.vec*((1+phi*mu.vec)^(-(1/phi+1)))))*x
+    dldb2 <- as.numeric((1-idx.Y0)*(weights/P1)*(1-zeroinfl.vec)*exp(l1)*(y-mu.vec)/(1+phi*mu.vec))*x
+    
+    dldphi1 <- (idx.Y0)*(weights/P0)*(1-zeroinfl.vec)*(aux^(-1/phi))*(log(aux)/((phi)^2)-mu.vec/(phi*aux))
+    dldphi2 <- (1-idx.Y0)*(weights/P1)*(1-zeroinfl.vec)*exp(l1)*(log(aux)/(phi^2)-mu.vec*(y+1/phi)/aux-digamma(y+1/phi)/(phi^2)+digamma(1/phi)/(phi^2)+y/phi)
+    
+    dldlambda1 <- as.numeric((idx.Y0)*(weights/P0)*(1-exp(l0))*zeroinfl.vec*(1-zeroinfl.vec))*x
+    dldlambda2 <- as.numeric((1-idx.Y0)*(weights/P1)*(-exp(l1))*zeroinfl.vec*(1-zeroinfl.vec))*x
+    
+    return(-c(colSums(dldb1+dldb2),sum(dldphi1+dldphi2),colSums(dldlambda1+dldlambda2)))
 }
 
 ################################################################################
@@ -98,7 +279,9 @@ derivZINB = function(par,y,x,offset,weights,minZero){
 ################################################################################
 
 invertDispersion = function(par,model){
-    if(model=='nb'){return(c(par[seq_len((length(par)-1))],1/par[length(par)]))}
+    if(model=='nb'){
+        return(c(par[seq_len((length(par)-1))],1/par[length(par)]))
+    }
     if(model=='zinb'){
         if(length(par)==3){
             return(c(par[2],1/par[3],par[1]))
@@ -174,30 +357,38 @@ getError <- function(controlHist,parHist,control){
 optimNB <- function(par,y,x,offset,weights,control,dist){
     
     if(dist == 'nb'){
-        tryCatch({assign('model',stats::optim(par=invertDispersion(par,model=dist),
-                                              fn=glmNB,
-                                              gr=derivNB,
-                                              method='L-BFGS-B',
-                                              lower=c(rep(-Inf,ncol(x)),1/control$maxDisp),
-                                              y = y,
-                                              x = x,
-                                              offset = offset,
-                                              weights = weights))},
-                 error=function(e){assign('model',list('par' = invertDispersion(par,model=dist),'convergence' = 99),inherits = TRUE)})
+        tryCatch({
+            assign('model',stats::optim(par=invertDispersion(par,model=dist),
+                                        fn=glmNB,
+                                        gr=derivNB,
+                                        method='L-BFGS-B',
+                                        lower=c(rep(-Inf,ncol(x)),1/control$maxDisp),
+                                        y = y,
+                                        x = x,
+                                        offset = offset,
+                                        weights = weights))},
+            error=function(e){
+                assign('model',list('par' = invertDispersion(par,model=dist),'convergence' = 99),
+                       inherits = TRUE)
+            })
         
         model$par <- invertDispersion(model$par,model=dist)   
     } else{
-        tryCatch({assign('model',stats::optim(par = invertDispersion(par,model=dist),
-                                              fn = glmZINB,
-                                              gr = derivZINB,
-                                              method = 'L-BFGS-B',
-                                              lower = c(rep(-Inf,ncol(x)),1/control$maxDisp,rep(-Inf,ncol(x))),
-                                              y = y,
-                                              x = x,
-                                              offset = offset,
-                                              weights = weights,
-                                              minZero = control$minZero))},
-                 error=function(e){assign('model',list('par' = invertDispersion(par,model=dist), 'convergence' = 99),inherits = TRUE)})
+        tryCatch({
+            assign('model',stats::optim(par = invertDispersion(par,model=dist),
+                                        fn = glmZINB,
+                                        gr = derivZINB,
+                                        method = 'L-BFGS-B',
+                                        lower = c(rep(-Inf,ncol(x)),1/control$maxDisp,rep(-Inf,ncol(x))),
+                                        y = y,
+                                        x = x,
+                                        offset = offset,
+                                        weights = weights,
+                                        minZero = control$minZero))},
+            error=function(e){
+                assign('model',list('par' = invertDispersion(par,model=dist), 'convergence' = 99),
+                       inherits = TRUE)
+            })
         if(ncol(x)==1){
             model$par <- c(model$par[c(3,1)],1/model$par[2])
         } else{
@@ -217,7 +408,9 @@ enumeratePatterns = function(object,group){
     Window = ref = NULL
     
     # Peaks by group
-    chain <- data.table::setDT(lapply(unique(group),function(x){1*(Matrix::rowSums(SummarizedExperiment::assay(object,'peaks')[,which(group==x),drop = FALSE])>0)}))
+    chain <- data.table::setDT(lapply(unique(group),function(x){
+        1*(Matrix::rowSums(SummarizedExperiment::assay(object,'peaks')[,which(group==x),drop = FALSE])>0)
+    }))
     data.table::setnames(chain,paste0('ChIP',seq_len(ncol(chain))))
     chain[,Window := seq_len(.N)]
     
@@ -234,7 +427,7 @@ enumeratePatterns = function(object,group){
 }
 
 ################################################################################
-### Function to dassociate mixture components with combinatorial patterns
+### Function to associate mixture components with combinatorial patterns
 ################################################################################
 
 determineMixtures <- function(pattern,group,nGroup,ref){
@@ -242,7 +435,9 @@ determineMixtures <- function(pattern,group,nGroup,ref){
         B <- length(pattern)
         z.seq <- lapply(seq_len(B),FUN = function(x){
             aux <- rep(FALSE,nGroup);aux[pattern[[x]]]<-TRUE
-            which(apply(as.matrix(ref[,seq_len(nGroup),with = FALSE])==1,1,FUN = function(x){all(x==aux)}))
+            which(apply(as.matrix(ref[,seq_len(nGroup),with = FALSE])==1,1,FUN = function(x){
+                all(x==aux)
+            }))
         })
     } else{
         if(is.null(pattern)){
@@ -261,13 +456,20 @@ determineMixtures <- function(pattern,group,nGroup,ref){
 
 generateMixtureIntercepts <- function(pattern,group,nGroup,ref,M,B){
     if(is.list(pattern)){
-        model <- lapply(unlist(lapply(pattern,FUN = function(x){
+        patList <- lapply(pattern,FUN = function(x){
             aux <- rep(FALSE,nGroup);aux[x]<-TRUE
-            which(apply(as.matrix(ref[,seq_len(nGroup),with = FALSE])==1,1,FUN = function(x){all(x==aux)}))
-        })),FUN = function(x){cbind(rep(t(ref[x,seq_len(nGroup),with = FALSE]),times=M*table(group)))})
+            which(apply(as.matrix(ref[,seq_len(nGroup),with = FALSE])==1,1,FUN = function(x){
+                all(x==aux)
+            }))
+        })
+        model <- lapply(unlist(patList),FUN = function(x){
+            cbind(rep(t(ref[x,seq_len(nGroup),with = FALSE]),times=M*table(group)))
+        })
     }
     if(is.null(pattern)){
-        model <- lapply(1+seq_len(B),FUN = function(x) cbind(rep(t(ref[x,seq_len(nGroup),with = FALSE]),times=M*table(group))))
+        model <- lapply(1+seq_len(B),FUN = function(x){
+            cbind(rep(t(ref[x,seq_len(nGroup),with = FALSE]),times=M*table(group)))
+        })
     }
     return(model)
 }
@@ -277,10 +479,11 @@ generateMixtureIntercepts <- function(pattern,group,nGroup,ref,M,B){
 ################################################################################
 
 estimateMixtureProb = function(zDifferential,zSeq,B){
-    return(unlist(lapply(seq_len(B),FUN = function(i){
+    mixList <- lapply(seq_len(B),FUN = function(i){
         subz.diff <- zDifferential[zDifferential%in%unlist(zSeq)]
         sum(subz.diff%in%zSeq[[i]]/length(subz.diff))
-    })))
+    })
+    return(unlist(mixList))
 }
 
 ################################################################################
@@ -291,8 +494,11 @@ estimateCoefficients <- function(z,dt,dist,type,control){
     Window = ChIP = offsets = mu = sigma2 = NULL
     
     parList <- lapply(range(z),function(x){
-        subpar <- dt[Window %in% which(z == x),list(mu = mean((ChIP+1)/exp(offsets)),sigma2 = stats::var((ChIP+1)/exp(offsets)))]
-        subpar[,c(zip = max(0.01,(sigma2-mu)/(sigma2+mu^2-mu)),mu = mu,disp = min((mu^2)/max(0,sigma2-mu),control[['maxDisp']]))]
+        subpar <- dt[Window %in% which(z == x),list(mu = mean((ChIP+1)/exp(offsets)),
+                                                    sigma2 = stats::var((ChIP+1)/exp(offsets)))]
+        subpar[,c(zip = max(0.01,(sigma2-mu)/(sigma2+mu^2-mu)),
+                  mu = mu,
+                  disp = min((mu^2)/max(0,sigma2-mu),control[['maxDisp']]))]
     })
     
     par <- list()
@@ -328,12 +534,25 @@ loglikDifferential = function(dt,delta,psi,N,M,dist,minZero){
     
     if(dist == 'nb'){
         ll <- lapply(seq_len(length(delta)),FUN = function(b){
-            log(delta[b])+rowSums(matrix(dt[,Dsg.Mix := .SD,.SDcols = paste0('Dsg.Mix',b)][,stats::dnbinom(x = ChIP,mu = exp(psi[1]+psi[3]*Dsg.Mix+offsets),size = exp(psi[2]+psi[4]*Dsg.Mix),log=TRUE)],nrow=M,ncol=N,byrow=FALSE))
+            log(delta[b])+rowSums(matrix(dt[,Dsg.Mix := .SD,.SDcols = paste0('Dsg.Mix',b)][,stats::dnbinom(x = ChIP,
+                                                                                                           mu = exp(psi[1]+psi[3]*Dsg.Mix+offsets),
+                                                                                                           size = exp(psi[2]+psi[4]*Dsg.Mix),
+                                                                                                           log=TRUE)],
+                                         nrow=M,ncol=N,byrow=FALSE))
         })
         dt[,Dsg.Mix := NULL]
     } else{
         ll <- lapply(seq_len(length(delta)),FUN = function(b){
-            log(delta[b])+rowSums(matrix(dt[,((.SD==1)*stats::dnbinom(ChIP,mu = exp(psi[2]+psi[4]+offsets),size = exp(psi[3]+psi[5]),log = TRUE) + (.SD==0)*dzinb(x = ChIP,mu = exp(psi[2]+offsets),size = exp(psi[3]),zip = exp(psi[1])/(1+exp(psi[1])),minZero = minZero)),.SDcols = paste0('Dsg.Mix',b)],nrow=M,ncol=N,byrow=FALSE))
+            log(delta[b])+rowSums(matrix(dt[,((.SD==1)*stats::dnbinom(x = ChIP,
+                                                                      mu = exp(psi[2]+psi[4]+offsets),
+                                                                      size = exp(psi[3]+psi[5]),
+                                                                      log = TRUE) + 
+                                                  (.SD==0)*dzinb(x = ChIP,
+                                                                 mu = exp(psi[2]+offsets),
+                                                                 size = exp(psi[3]),
+                                                                 zip = exp(psi[1])/(1+exp(psi[1])),
+                                                                 minZero = minZero)),.SDcols = paste0('Dsg.Mix',b)],
+                                         nrow=M,ncol=N,byrow=FALSE))
         })
     }
     
@@ -370,18 +589,49 @@ loglikDifferentialHMM = function(dt,theta,N,M,minZero,dist){
     
     if(dist == 'nb'){
         #LL from Background
-        LL[,1] <- rowSums(matrix(dt[,stats::dnbinom(x = ChIP,mu = exp(psi[1]+offsets),size = exp(psi[2]),log=TRUE)],nrow=M,ncol=N,byrow=FALSE))
+        LL[,1] <- rowSums(matrix(dt[,stats::dnbinom(x = ChIP,
+                                                    mu = exp(psi[1]+offsets),
+                                                    size = exp(psi[2]),
+                                                    log=TRUE)],
+                                 nrow=M,ncol=N,byrow=FALSE))
         #LL from Mixture
-        LL[,2] <- log(base::Reduce(`+`,lapply(loglikDifferential(dt = dt,delta = delta,psi = psi,N = N,M = M,dist = dist,minZero = minZero),exp)))
+        LL[,2] <- log(base::Reduce(`+`,lapply(loglikDifferential(dt = dt,
+                                                                 delta = delta,
+                                                                 psi = psi,
+                                                                 N = N,
+                                                                 M = M,
+                                                                 dist = dist,
+                                                                 minZero = minZero),
+                                              exp)))
         #LL from Enrichment
-        LL[,3] <- rowSums(matrix(dt[,stats::dnbinom(x = ChIP,mu = exp((psi[1]+psi[3])+offsets),size = exp((psi[2]+psi[4])),log=TRUE)],nrow=M,ncol=N,byrow=FALSE))
+        LL[,3] <- rowSums(matrix(dt[,stats::dnbinom(x = ChIP,
+                                                    mu = exp((psi[1]+psi[3])+offsets),
+                                                    size = exp((psi[2]+psi[4])),
+                                                    log=TRUE)],
+                                 nrow=M,ncol=N,byrow=FALSE))
     } else{
         #LL from Background
-        LL[,1] = rowSums(matrix(dt[,dzinb(x = ChIP,mu = exp(psi[2]+offsets),size = exp(psi[3]),zip = exp(psi[1])/(1+exp(psi[1])),minZero = minZero)],nrow=M,ncol=N,byrow=FALSE))
+        LL[,1] = rowSums(matrix(dt[,dzinb(x = ChIP,
+                                          mu = exp(psi[2]+offsets),
+                                          size = exp(psi[3]),
+                                          zip = exp(psi[1])/(1+exp(psi[1])),
+                                          minZero = minZero)],
+                                nrow=M,ncol=N,byrow=FALSE))
         #LL from Mixture
-        LL[,2] <- log(base::Reduce(`+`,lapply(loglikDifferential(dt = dt,delta = delta,psi = psi,N = N,M = M,dist = dist,minZero = minZero),exp)))
+        LL[,2] <- log(base::Reduce(`+`,lapply(loglikDifferential(dt = dt,
+                                                                 delta = delta,
+                                                                 psi = psi,
+                                                                 N = N,
+                                                                 M = M,
+                                                                 dist = dist,
+                                                                 minZero = minZero),
+                                              exp)))
         #LL from Enrichment
-        LL[,3] = rowSums(matrix(dt[,stats::dnbinom(x = ChIP,mu = exp(psi[2]+psi[4]+offsets),size = exp(psi[3] + psi[5]),log = TRUE)],nrow=M,ncol=N,byrow=FALSE))
+        LL[,3] = rowSums(matrix(dt[,stats::dnbinom(x = ChIP,
+                                                   mu = exp(psi[2]+psi[4]+offsets),
+                                                   size = exp(psi[3] + psi[5]),
+                                                   log = TRUE)],
+                                nrow=M,ncol=N,byrow=FALSE))
     }
     
     LL[is.infinite(LL)] <- log(minZero)
@@ -403,18 +653,32 @@ loglikConsensusHMM = function(dt,theta,N,M,minZero,dist){
     
     if(dist == 'nb'){
         #LL from Background
-        LL[,1] <- rowSums(matrix(dt[,log(stats::dnbinom(x = ChIP,mu = exp(theta$psi[[1]][1]+ifelse(useControl,theta$psi[[1]][2]*controls,0)+offsets),size = ifelse(useControl,theta$psi[[1]][3],theta$psi[[1]][2]),log=FALSE)+minZero)],nrow=M,ncol=N,byrow=FALSE))
+        LL[,1] <- rowSums(matrix(dt[,log(stats::dnbinom(x = ChIP,
+                                                        mu = exp(theta$psi[[1]][1]+ifelse(useControl,theta$psi[[1]][2]*controls,0)+offsets),
+                                                        size = ifelse(useControl,theta$psi[[1]][3],theta$psi[[1]][2]),log=FALSE)+minZero)],
+                                 nrow=M,ncol=N,byrow=FALSE))
         #LL from Enrichment
-        LL[,2] <- rowSums(matrix(dt[,log(stats::dnbinom(x = ChIP,mu = exp(theta$psi[[2]][1]+ifelse(useControl,theta$psi[[2]][2]*controls,0)+offsets),size = ifelse(useControl,theta$psi[[2]][3],theta$psi[[2]][2]),log=FALSE)+minZero)],nrow=M,ncol=N,byrow=FALSE))
+        LL[,2] <- rowSums(matrix(dt[,log(stats::dnbinom(x = ChIP,
+                                                        mu = exp(theta$psi[[2]][1]+ifelse(useControl,theta$psi[[2]][2]*controls,0)+offsets),
+                                                        size = ifelse(useControl,theta$psi[[2]][3],theta$psi[[2]][2]),log=FALSE)+minZero)],
+                                 nrow=M,ncol=N,byrow=FALSE))
     } else{
         #LL from Background
-        LL[,1] = rowSums(matrix(dt[,cbind('zip' = 1/(1+exp(-(ifelse(useControl,theta$psi[[1]][1] + theta$psi[[1]][2]*controls,theta$psi[[1]][1])+offsets))),
+        LL[,1] <- rowSums(matrix(dt[,cbind('zip' = 1/(1+exp(-(ifelse(useControl,theta$psi[[1]][1] + theta$psi[[1]][2]*controls,theta$psi[[1]][1])+offsets))),
                                           'yvec0' = 1*(ChIP == 0),
-                                          'll00' = log(stats::dnbinom(0,mu = exp(ifelse(useControl,theta$psi[[1]][3] + theta$psi[[1]][4]*controls,theta$psi[[1]][2]) + offsets),size = ifelse(useControl,theta$psi[[1]][5],theta$psi[[1]][3]),log=FALSE)+minZero),
-                                          'll01' = log(stats::dnbinom(ChIP,mu = exp(ifelse(useControl,theta$psi[[1]][3] + theta$psi[[1]][4]*controls,theta$psi[[1]][2]) + offsets),size = ifelse(useControl,theta$psi[[1]][5],theta$psi[[1]][3]),log=FALSE)+minZero),.SD)][,yvec0*log(zip+exp(log(1-zip)+ll00)) + (1-yvec0)*(log(1-zip)+ll01)],nrow=M,ncol=N,byrow=FALSE))
+                                          'll00' = log(stats::dnbinom(x = 0,
+                                                                      mu = exp(ifelse(useControl,theta$psi[[1]][3] + theta$psi[[1]][4]*controls,theta$psi[[1]][2]) + offsets),
+                                                                      size = ifelse(useControl,theta$psi[[1]][5],theta$psi[[1]][3]),log=FALSE)+minZero),
+                                          'll01' = log(stats::dnbinom(x = ChIP,
+                                                                      mu = exp(ifelse(useControl,theta$psi[[1]][3] + theta$psi[[1]][4]*controls,theta$psi[[1]][2]) + offsets),
+                                                                      size = ifelse(useControl,theta$psi[[1]][5],theta$psi[[1]][3]),log=FALSE)+minZero),.SD)][,yvec0*log(zip+exp(log(1-zip)+ll00)) + (1-yvec0)*(log(1-zip)+ll01)],
+                                nrow=M,ncol=N,byrow=FALSE))
         
         #LL from Enrichment
-        LL[,2] = rowSums(matrix(dt[,log(stats::dnbinom(x = ChIP,mu = exp(ifelse(useControl,theta$psi[[2]][1]+theta$psi[[2]][2]*controls,theta$psi[[2]][1])+offsets),size = ifelse(useControl,theta$psi[[2]][3],theta$psi[[2]][2]),log=FALSE)+minZero)],nrow=M,ncol=N,byrow=FALSE))
+        LL[,2] <- rowSums(matrix(dt[,log(stats::dnbinom(x = ChIP,
+                                                       mu = exp(ifelse(useControl,theta$psi[[2]][1]+theta$psi[[2]][2]*controls,theta$psi[[2]][1])+offsets),
+                                                       size = ifelse(useControl,theta$psi[[2]][3],theta$psi[[2]][2]),log=FALSE)+minZero)],
+                                nrow=M,ncol=N,byrow=FALSE))
     }
     
     return(LL)
@@ -427,11 +691,14 @@ loglikConsensusHMM = function(dt,theta,N,M,minZero,dist){
 
 innerExpStep = function(dt,theta,N,M,model,hdf5,minZero,dist){
     
-    ll <- loglikDifferential(dt = dt,delta = theta$delta,psi = unlist(theta$psi),N = N,M = M,dist = dist,minZero = minZero)
+    ll <- loglikDifferential(dt = dt,delta = theta$delta,psi = unlist(theta$psi),
+                             N = N,M = M,dist = dist,minZero = minZero)
     ll <- rapply(ll,function(x){ifelse(exp(x)==0,log(minZero),x)}, how = "replace")
     sumExpLL <- Reduce(`+`,lapply(ll,exp))
     
-    rhdf5::h5write(obj = vapply(seq_len(length(theta$delta)),FUN = function(b){exp(ll[[b]])/sumExpLL},FUN.VALUE = vector('double',length = M)),
+    rhdf5::h5write(obj = vapply(seq_len(length(theta$delta)),
+                                FUN = function(b){exp(ll[[b]])/sumExpLL},
+                                FUN.VALUE = vector('double',length = M)),
                    file = hdf5,
                    name = 'mixtureProb')
 }
@@ -451,9 +718,15 @@ glmMixNB = function(par,dt,maxid,minZero){
     # Hence, only 4 parameters drive the entire distributions of this HMM
     Intercept = weights = ChIP = Dsg.Mix = offsets = id = NULL
     
-    return(sum(dt[(id==1),][,-weights*log(stats::dnbinom(ChIP,mu = exp(par[1]*Intercept+offsets),size = exp(par[3]*Intercept),log = FALSE)+minZero)])+
-               do.call(sum,lapply(2:(maxid-1),FUN = function(x){sum(dt[(id == x),][,Dsg.Mix := .SD,.SDcols = paste0('Dsg.Mix',(x-1))][,-weights*log(stats::dnbinom(ChIP,mu = exp(par[1]*Intercept+par[2]*Dsg.Mix+offsets),size = exp(par[3]*Intercept+par[4]*Dsg.Mix),log = FALSE)+minZero)])}))+
-               sum(dt[(id==maxid),][,-weights*log(stats::dnbinom(ChIP,mu = exp((par[1]+par[2])*Intercept+offsets),size = exp((par[3]+par[4])*Intercept),log = FALSE)+minZero)]))
+    return(sum(dt[(id==1),][,-weights*log(stats::dnbinom(x = ChIP,
+                                                         mu = exp(par[1]*Intercept+offsets),
+                                                         size = exp(par[3]*Intercept),log = FALSE)+minZero)])+
+               do.call(sum,lapply(2:(maxid-1),FUN = function(x){sum(dt[(id == x),][,Dsg.Mix := .SD,.SDcols = paste0('Dsg.Mix',(x-1))][,-weights*log(stats::dnbinom(x = ChIP,
+                                                                                                                                                                   mu = exp(par[1]*Intercept+par[2]*Dsg.Mix+offsets),
+                                                                                                                                                                   size = exp(par[3]*Intercept+par[4]*Dsg.Mix),log = FALSE)+minZero)])}))+
+               sum(dt[(id==maxid),][,-weights*log(stats::dnbinom(x = ChIP,
+                                                                 mu = exp((par[1]+par[2])*Intercept+offsets),
+                                                                 size = exp((par[3]+par[4])*Intercept),log = FALSE)+minZero)]))
 }
 
 derivMixNB = function(par,dt,maxid,minZero){
@@ -500,11 +773,23 @@ glmMixZINB = function(par,dt,maxid,minZero){
     # Hence, only 5 parameters drive the entire distributions of this HMM
     Dsg.Mix = weights = ChIP = Intercept = offsets = id = NULL
     
-    return(sum(dt[(id==1),][,-weights*dzinb(ChIP,mu = exp(par[2]*Intercept+offsets),size = exp(par[3]*Intercept),zip = exp(par[1])/(1+exp(par[1])),minZero = minZero)])+
+    return(sum(dt[(id==1),][,-weights*dzinb(x = ChIP,
+                                            mu = exp(par[2]*Intercept+offsets),
+                                            size = exp(par[3]*Intercept),
+                                            zip = exp(par[1])/(1+exp(par[1])),
+                                            minZero = minZero)])+
                do.call(sum,lapply(2:(maxid-1),FUN = function(x){
-                   sum(dt[(id == x),][,Dsg.Mix := .SD,.SDcols = paste0('Dsg.Mix',(x-1))][,-weights*((Dsg.Mix==1)*log(stats::dnbinom(ChIP,mu = exp(par[4]*Intercept+offsets),size = exp(par[5]*Intercept),log = FALSE)+minZero) + (Dsg.Mix==0)*dzinb(ChIP,mu = exp(par[2]*Intercept+offsets),size = exp(par[3]*Intercept),zip = exp(par[1])/(1+exp(par[1])),minZero = minZero))])
+                   sum(dt[(id == x),][,Dsg.Mix := .SD,.SDcols = paste0('Dsg.Mix',(x-1))][,-weights*((Dsg.Mix==1)*log(stats::dnbinom(x = ChIP,
+                                                                                                                                    mu = exp(par[4]*Intercept+offsets),
+                                                                                                                                    size = exp(par[5]*Intercept),log = FALSE)+minZero) + 
+                                                                                                        (Dsg.Mix==0)*dzinb(x = ChIP,
+                                                                                                                           mu = exp(par[2]*Intercept+offsets),
+                                                                                                                           size = exp(par[3]*Intercept),
+                                                                                                                           zip = exp(par[1])/(1+exp(par[1])),minZero = minZero))])
                }))+
-               sum(dt[(id==maxid),][,-weights*log(stats::dnbinom(ChIP,mu = exp(par[4]*Intercept+offsets),size = exp(par[5]*Intercept),log = FALSE)+minZero)]))
+               sum(dt[(id==maxid),][,-weights*log(stats::dnbinom(x = ChIP,
+                                                                 mu = exp(par[4]*Intercept+offsets),
+                                                                 size = exp(par[5]*Intercept),log = FALSE)+minZero)]))
     
 }
 
@@ -546,30 +831,36 @@ derivMixZINB = function(par,dt,maxid,minZero){
 optimDifferential <- function(par,rcWeights,control,dist){
     
     if(dist == 'nb'){
-        tryCatch({assign('model',stats::optim(par = par[c(1,3,2,4)],
-                                              fn = glmMixNB,
-                                              gr = derivMixNB,
-                                              method = 'L-BFGS-B',
-                                              lower = rep(log(control[['minZero']]),4),
-                                              upper = c(Inf,Inf,rep(log(control[['maxDisp']]),2)),
-                                              dt = rcWeights,
-                                              minZero = control[['minZero']],
-                                              maxid = length(unique(rcWeights$id))))},
-                 error=function(e){assign('model',list('par' = par, 'convergence' = 99),inherits = TRUE)})
+        tryCatch({
+            assign('model',stats::optim(par = par[c(1,3,2,4)],
+                                        fn = glmMixNB,
+                                        gr = derivMixNB,
+                                        method = 'L-BFGS-B',
+                                        lower = rep(log(control[['minZero']]),4),
+                                        upper = c(Inf,Inf,rep(log(control[['maxDisp']]),2)),
+                                        dt = rcWeights,
+                                        minZero = control[['minZero']],
+                                        maxid = length(unique(rcWeights$id))))
+        },error=function(e){
+            assign('model',list('par' = par, 'convergence' = 99),inherits = TRUE)
+        })
         
         model$par <- model$par[c(1,3,2,4)]
     } else{
         newpar <- c(par[c(1,2,3)],par[2]+par[4],par[3]+par[5])
-        tryCatch({assign('model',stats::optim(par = newpar,
-                                              fn = glmMixZINB,
-                                              gr = derivMixZINB,
-                                              method = 'L-BFGS-B',
-                                              lower = rep(log(control[['minZero']]),5),
-                                              upper = c(Inf,rep(c(Inf,log(control[['maxDisp']])),2)),
-                                              dt = rcWeights,
-                                              minZero = control[['minZero']],
-                                              maxid = length(unique(rcWeights$id))))},
-                 error=function(e){assign('model',list('par' = par, 'convergence' = 99),inherits = TRUE)})
+        tryCatch({
+            assign('model',stats::optim(par = newpar,
+                                        fn = glmMixZINB,
+                                        gr = derivMixZINB,
+                                        method = 'L-BFGS-B',
+                                        lower = rep(log(control[['minZero']]),5),
+                                        upper = c(Inf,rep(c(Inf,log(control[['maxDisp']])),2)),
+                                        dt = rcWeights,
+                                        minZero = control[['minZero']],
+                                        maxid = length(unique(rcWeights$id))))
+        },error=function(e){
+            assign('model',list('par' = par, 'convergence' = 99),inherits = TRUE)
+        })
         
         model$par <- c(model$par[c(1,2,3)],model$par[4]-model$par[2],model$par[5]-model$par[3])
     }
@@ -696,7 +987,11 @@ initializerHMM = function(object,control){
         # E-step
         expStep(pi = theta.old[['pi']],
                 gamma = theta.old[['gamma']],
-                logf = do.call(cbind,lapply(c(1,2),function(x){stats::dnbinom(x = assay(object,'counts'),mu = exp(theta.old[['psi']][[x]][1]+as.numeric(assay(object,'offsets'))),size = theta.old[['psi']][[x]][2],log = TRUE)})),
+                logf = do.call(cbind,lapply(c(1,2),function(x){
+                    stats::dnbinom(x = assay(object,'counts'),
+                                   mu = exp(theta.old[['psi']][[x]][1]+as.numeric(assay(object,'offsets'))),
+                                   size = theta.old[['psi']][[x]][2],log = TRUE)
+                })),
                 hdf5 = hdf5File)
         
         # M-step
@@ -706,8 +1001,10 @@ initializerHMM = function(object,control){
         ## Model parameters
         ### Rejection-controlled posterior probabilities
         probCut <-  (control[['probCut']]>0)*max(c(0.9^controlHist[[length(controlHist)]][['iteration']],control[['probCut']]))
-        rcWeights <- lapply(consensusRejectionControlled(hdf5 = hdf5File,f = dt$Group,p = probCut)[,1],
-                            function(x){colnames(x) <- c('weights','Group');return(as.matrix(cbind(x,dtUnique[match(x[,2],Group),][,-c('Group')][,Intercept := 1])))})
+        rcWeights <- lapply(consensusRejectionControlled(hdf5 = hdf5File,f = dt$Group,p = probCut)[,1],function(x){
+            colnames(x) <- c('weights','Group')
+            return(as.matrix(cbind(x,dtUnique[match(x[,2],Group),][,-c('Group')][,Intercept := 1])))
+        })
         
         ### Calculating MLEs
         optimMLE <- lapply(seq_len(length(rcWeights)),function(x){
@@ -733,7 +1030,9 @@ initializerHMM = function(object,control){
         controlHist[[length(controlHist)]][['q']] <- computeQFunction(hdf5 = hdf5File,pi = theta.old[['pi']],gamma = theta.old[['gamma']])
         controlHist[[length(controlHist)]][['convergence']] <-  1*any(!unname(unlist(lapply(optimMLE,function(x){x[['convergence']]}))) == 0)
         controlHist[[length(controlHist)]][['error']] <- getError(controlHist = controlHist,parHist = parHist,control = control)
-        controlHist[[length(controlHist)]][['count']] <- (controlHist[[length(controlHist)]][['error']]<=control[['epsilonEM']])*(controlHist[[length(controlHist)]][['iteration']]>control[['minIterEM']])*(controlHist[[length(controlHist)]][['count']]+1) + 0
+        controlHist[[length(controlHist)]][['count']] <- (controlHist[[length(controlHist)]][['error']]<=control[['epsilonEM']])*
+            (controlHist[[length(controlHist)]][['iteration']]>control[['minIterEM']])*
+            (controlHist[[length(controlHist)]][['count']]+1) + 0
         
         # Updating controlHist
         controlHist[[length(controlHist)+1]] <- controlHist[[length(controlHist)]]
@@ -786,7 +1085,12 @@ differentialHMM = function(object,control,dist){
     
     # Transforming data into data.table
     dt <- data.table::data.table(Window = rep(seq_len(M),N),ChIP = as.numeric(assay(object)),offsets = as.numeric(assay(object,'offsets')))
-    dt[,paste0('Dsg.Mix',seq_len(zMixtures$B)) := generateMixtureIntercepts(pattern = control[['pattern']],group = group,nGroup = nGroup,ref = zPatterns$ref,M = M,B = zMixtures$B)]
+    dt[,paste0('Dsg.Mix',seq_len(zMixtures$B)) := generateMixtureIntercepts(pattern = control[['pattern']],
+                                                                            group = group,
+                                                                            nGroup = nGroup,
+                                                                            ref = zPatterns$ref,
+                                                                            M = M,
+                                                                            B = zMixtures$B)]
     dt[,Group := .GRP,by=c('ChIP','offsets',paste0('Dsg.Mix',seq_len(zMixtures$B)))]
     
     # Creating unique data.table
@@ -795,7 +1099,8 @@ differentialHMM = function(object,control,dist){
     
     # Parameter initializations
     theta.old[['pi']] <- c(0.999,0.0005,0.0005)
-    theta.old[['gamma']] <- estimateTransitionProb(chain = 0*(zPatterns$group$Group==min(zPatterns$group$Group))+1*(!zPatterns$group$Group%in%range(zPatterns$group$Group))+2*(zPatterns$group$Group==max(zPatterns$group$Group)),
+    theta.old[['gamma']] <- estimateTransitionProb(chain = 0*(zPatterns$group$Group==min(zPatterns$group$Group))+
+                                                       1*(!zPatterns$group$Group%in%range(zPatterns$group$Group))+2*(zPatterns$group$Group==max(zPatterns$group$Group)),
                                                    numStates = K)
     theta.old[['delta']] <- estimateMixtureProb(zDifferential = zPatterns$group$Group[!(zPatterns$group$Group%in%c(1,max(zPatterns$group$Group)))],
                                                 zSeq = zMixtures$zSeq,
@@ -814,7 +1119,8 @@ differentialHMM = function(object,control,dist){
         # E-step
         expStep(pi = theta.old[['pi']],
                 gamma = theta.old[['gamma']],
-                logf = loglikDifferentialHMM(dt = dt,theta = theta.old,N = N,M = M,minZero = control[['minZero']],dist = dist),
+                logf = loglikDifferentialHMM(dt = dt,theta = theta.old,N = N,M = M,
+                                             minZero = control[['minZero']],dist = dist),
                 hdf5 = hdf5File)
         
         # M-step
@@ -832,15 +1138,18 @@ differentialHMM = function(object,control,dist){
         
         while(count.innerem<control[['maxIterInnerEM']] & error.innerem>control[['epsilonInnerEM']]){
             #### Inner EM: E-step
-            suppressMessages(innerExpStep(dt = dt,theta = theta.tmp.old,N = N,M = M,model = 'nb',hdf5 = hdf5File,minZero = control[['minZero']],dist = dist))
+            suppressMessages(innerExpStep(dt = dt,theta = theta.tmp.old,N = N,M = M,
+                                          model = 'nb',hdf5 = hdf5File,minZero = control[['minZero']],dist = dist))
             
             #### Inner EM: M-step
             ##### Mixing probability
             theta.tmp.new[['delta']] <- c(innerMaxStepProb(hdf5 = hdf5File))
             
             ##### Model parameters
-            rcWeights <- rbindlist(lapply(differentialRejectionControlled(hdf5 = hdf5File,f = dt$Group,p = probCut,N = N)[,1],
-                                          function(x){colnames(x) <- c('weights','Group');return(cbind(x,dtUnique[match(x[,2],Group),][,-c('Group')][,Intercept := 1]))}),idcol = 'id')
+            rcWeights <- rbindlist(lapply(differentialRejectionControlled(hdf5 = hdf5File,f = dt$Group,p = probCut,N = N)[,1],function(x){
+                colnames(x) <- c('weights','Group')
+                return(cbind(x,dtUnique[match(x[,2],Group),][,-c('Group')][,Intercept := 1]))
+            }),idcol = 'id')
             
             ###### Calculating MLEs
             optimMLE <- optimDifferential(par = unlist(theta.tmp.old$psi),rcWeights = rcWeights,control = control,dist = dist)
@@ -868,7 +1177,9 @@ differentialHMM = function(object,control,dist){
         controlHist[[length(controlHist)]][['q']] <- computeQFunction(hdf5 = hdf5File,pi = theta.old[['pi']],gamma = theta.old[['gamma']])
         controlHist[[length(controlHist)]][['convergence']] <- optimMLE$convergence
         controlHist[[length(controlHist)]][['error']] <- getError(controlHist = controlHist,parHist = parHist,control = control)
-        controlHist[[length(controlHist)]][['count']] <- (controlHist[[length(controlHist)]][['error']]<=control[['epsilonEM']])*(controlHist[[length(controlHist)]][['iteration']]>control[['minIterEM']])*(controlHist[[length(controlHist)]][['count']]+1) + 0
+        controlHist[[length(controlHist)]][['count']] <- (controlHist[[length(controlHist)]][['error']]<=control[['epsilonEM']])*
+            (controlHist[[length(controlHist)]][['iteration']]>control[['minIterEM']])*
+            (controlHist[[length(controlHist)]][['count']]+1) + 0
         
         # Updating controlHist
         controlHist[[length(controlHist)+1]] <- controlHist[[length(controlHist)]]
@@ -971,8 +1282,10 @@ consensusHMM = function(object,control,dist)
         ## Model parameters
         ### Rejection-controlled posterior probabilities
         probCut <-  (control[['probCut']]>0)*max(c(0.9^controlHist[[length(controlHist)]][['iteration']],control[['probCut']]))
-        rcWeights <- lapply(consensusRejectionControlled(hdf5 = hdf5File,f = dt$Group,p = probCut)[,1],
-                            function(x){colnames(x) <- c('weights','Group');return(as.matrix(cbind(x,dtUnique[match(x[,2],Group),][,-c('Group')][,Intercept := 1])))})
+        rcWeights <- lapply(consensusRejectionControlled(hdf5 = hdf5File,f = dt$Group,p = probCut)[,1],function(x){
+            colnames(x) <- c('weights','Group')
+            return(as.matrix(cbind(x,dtUnique[match(x[,2],Group),][,-c('Group')][,Intercept := 1])))
+        })
         
         ### Calculating MLEs
         optimMLE <- lapply(seq_len(length(rcWeights)),function(i){
