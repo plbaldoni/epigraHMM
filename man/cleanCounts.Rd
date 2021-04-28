@@ -14,7 +14,7 @@ Names in `effectNames` must be assays stored in the epigraHMMDataSet `object`.}
 
 \item{byNames}{a character vector with the name of an assay containing stratification variables which will be used to define stratum-specific effects.
 Examples of byNames assays include the 'peaks' assay from `initializer()`. In this case, models will be fit separately for peaks and non-peaks regions.
-This can be usefor for effects such as GC content, which are known to have a differential effect between peaks and non-peak regions.
+This can be useful for effects such as GC content, which are known to have a differential effect between peaks and non-peak regions.
 Default is NULL, i.e., effects will be removed without stratification.}
 
 \item{log}{a logical indicating if the effect from `effectNames` should be log-transformed in the regression model (default is TRUE)}
@@ -24,9 +24,6 @@ An epigraHMMDataSet with an 'offset' assay filled in.
 }
 \description{
 This function removes the effect from covariates of interest (such as GC content) from experimental counts
-}
-\details{
-To be added
 }
 \examples{
 
