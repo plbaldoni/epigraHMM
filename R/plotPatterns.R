@@ -105,7 +105,7 @@ plotPatterns = function(object,
     names(anno_colors[['Pattern']]) <- colnames(sub_postprob)
     
     # Plotting
-    pheatmap::pheatmap(sub_postprob,
+    fig <- pheatmap::pheatmap(sub_postprob,
                        color = grDevices::colorRampPalette(c(4, "white", 2))(256),
                        annotation_col = data.frame('Pattern' = colnames(sub_postprob),
                                                    row.names = colnames(sub_postprob)),
@@ -117,4 +117,6 @@ plotPatterns = function(object,
                                      scales::comma(max(end(sub_object))),')'),
                        labels_row = 'Genomic\nWindows',
                        annotation_names_col = FALSE)
+    
+    return(fig)
 }
