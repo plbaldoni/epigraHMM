@@ -98,11 +98,19 @@ epigraHMMDataSetFromMatrix <- function(countData,colData,rowRanges = NULL){
 
     # Saving final output
 
-    epigraHMMDataSet <- SummarizedExperiment::SummarizedExperiment(assays = list(counts = matrix(countData[['counts']],byrow = FALSE,nrow = nrow(countData[['counts']]),ncol = ncol(countData[['counts']]),dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))),colData = colData)
+    epigraHMMDataSet <- SummarizedExperiment::SummarizedExperiment(assays = list(counts = matrix(countData[['counts']],
+                                                                                                 byrow = FALSE,
+                                                                                                 nrow = nrow(countData[['counts']]),
+                                                                                                 ncol = ncol(countData[['counts']]),
+                                                                                                 dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))),
+                                                                   colData = colData)
 
     # Adding offsets
     
-    epigraHMMDataSet <- addOffsets(epigraHMMDataSet,Matrix::Matrix(0,nrow = nrow(epigraHMMDataSet),ncol = ncol(epigraHMMDataSet),sparse = TRUE))
+    epigraHMMDataSet <- addOffsets(epigraHMMDataSet,Matrix::Matrix(0,
+                                                                   nrow = nrow(epigraHMMDataSet),
+                                                                   ncol = ncol(epigraHMMDataSet),
+                                                                   sparse = TRUE))
     
     # Adding rowRanges
 
@@ -120,12 +128,8 @@ epigraHMMDataSetFromMatrix <- function(countData,colData,rowRanges = NULL){
     }
     
     # Sorting the object
-
-    if(!all(base::order(SummarizedExperiment::colData(epigraHMMDataSet)[,c('condition','replicate')],decreasing = FALSE)==seq_len(nrow(SummarizedExperiment::colData(epigraHMMDataSet))))){
-        epigraHMMDataSet <- epigraHMMDataSet[,base::order(SummarizedExperiment::colData(epigraHMMDataSet)[,c('condition','replicate')],decreasing = FALSE)]
-        message("Rows of colData have been sorted with respect to conditions (and replicates). The resulting colData is:")
-        message(paste0(utils::capture.output(SummarizedExperiment::colData(epigraHMMDataSet)), collapse = "\n"))
-    }
+    
+    epigraHMMDataSet <- sortObject(epigraHMMDataSet)
 
     return(epigraHMMDataSet)
 }
