@@ -40,7 +40,7 @@ If you use epigraHMM in published research for _consensus_ peak calling of epige
 
 If epigraHMM is used in published research for _differential_ peak calling of epigenomic data, please cite:
 
-> Baldoni, PL, Rashid, NU, Ibrahim, JG. Efficient Detection and Classification of Epigenomic Changes Under Multiple Conditions. bioRxiv. 2019. https://doi.org/10.1101/864124
+> Baldoni, PL, Rashid, NU, Ibrahim, JG. Efficient Detection and Classification of Epigenomic Changes Under Multiple Conditions. Biometrics (in press). https://doi.org/10.1111/biom.13477
 
 ## How to get help for epigraHMM
 
