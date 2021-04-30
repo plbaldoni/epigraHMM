@@ -31,9 +31,7 @@
 #' @export
 addOffsets <- function(object, offsets) {
     
-    if(any(is.nan(as.matrix(offsets)) | 
-           is.infinite(as.matrix(offsets)) | 
-           is.na(as.matrix(offsets)))){
+    if(any(is.nan(as.matrix(offsets)) | is.infinite(as.matrix(offsets)) | is.na(as.matrix(offsets)))){
         stop('offsets must not contain NA, NaN, or infinite values')
     }
     
