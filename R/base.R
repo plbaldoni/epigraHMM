@@ -1,4 +1,62 @@
 ################################################################################
+### Melt data.table for plotting counts
+################################################################################
+
+meltCounts <- function(DT,ranges,object,subobject,peaks,annotation,subsetIdx) {
+    
+    Sample = Window = NULL
+    
+    if (methods::is(ranges)[1] == "GRanges") {
+        DT <- cbind(DT, as.data.table(rowRanges(object))[subsetIdx, c('seqnames', 'start', 'end', 'width', 'strand')])
+        DT[, Window := seq_len(.N)]
+        DTmelt <-data.table::melt(DT,
+                                  id.vars = c('Window', 'start'),
+                                  measure.vars = seq_len(ncol(DT) - 6),
+                                  value.name = 'Counts',
+                                  variable.name = 'Sample')
+        if (!is.null(peaks)) {
+            DTmelt[Sample == levels(Sample)[1], peaks := overlapsAny(subobject, peaks)]
+        }
+        if (!is.null(annotation)) {
+            DTmelt[Sample == levels(Sample)[1], annotation := overlapsAny(subobject, annotation)]
+        }
+    } else{
+        DT[, start := seq_len(nrow(object))[subsetIdx]]
+        DT[, Window := seq_len(.N)]
+        DTmelt <- data.table::melt(DT, 
+                                   id.vars = c('Window', 'start'),
+                                   measure.vars = seq_len(ncol(DT) - 2),
+                                   value.name = 'Counts',
+                                   variable.name = 'Sample')
+        if (!is.null(peaks)) {
+            DTmelt[Sample == levels(Sample)[1], peaks := peaks[subsetIdx]]
+        }
+        if (!is.null(annotation)) {
+            DTmelt[Sample == levels(Sample)[1], annotation := annotation[subsetIdx]]
+        }
+    }
+    return(list('DT' = DT, 'DTmelt' = DTmelt))
+}
+
+################################################################################
+### Transform data.table for plotting counts
+################################################################################
+
+aggregateCounts <- function(DT,ifDifferential,object) {
+    if (ifDifferential) {
+        nameCol <- paste0(unique(SummarizedExperiment::colData(object)$condition))
+        for (i in nameCol) {
+            DT[, paste0(i) := rowSums(.SD), .SDcols = which(SummarizedExperiment::colData(object)$condition == i)]
+        }
+        DT <- DT[, nameCol, with = FALSE]
+    } else{
+        nameCol <- paste0('Replicate ',SummarizedExperiment::colData(object)$replicate)
+        data.table::setnames(DT, nameCol)
+    }
+    return(DT)
+}
+
+################################################################################
 ### Write bedGraph file
 ################################################################################
 
@@ -120,12 +178,19 @@ getGenome <- function(genome,windowSize,bamFiles){
 
 getList <- function(blackList,genome){
     if(!methods::is(blackList)[1]=="GRanges"){
-        urlList <- paste0('https://github.com/Boyle-Lab/Blacklist/raw/master/lists/',genome,'-blacklist.v2.bed.gz')
-        if(isTRUE(blackList) & is.character(genome) & RCurl::url.exists(urlList)){
-            dt.blackList <- data.table::as.data.table(rtracklayer::import(rtracklayer::BEDFile(urlList)))
+        
+        dataExists <- paste0(genome,'.blacklist') %in% utils::data(package = 'GreyListChIP')$results[,'Item']
+        
+        if(isTRUE(blackList) & is.character(genome) & dataExists){
             
-            gr.blackList <- GenomicRanges::makeGRangesFromDataFrame(df = dt.blackList,
-                                                                    seqinfo = GenomeInfoDb::Seqinfo(genome=genome))
+            load(system.file(file.path('data',paste0(genome,'.blacklist.RData')),package = "GreyListChIP"),
+                 envir = environment())
+            
+            gr.blacklist <- get(paste0(genome,'.blacklist'))
+            
+            gr.blackList <- GenomicRanges::GRanges(seqnames = seqnames(gr.blacklist),
+                                                   ranges = IRanges::ranges(gr.blacklist),
+                                                   seqinfo = GenomeInfoDb::Seqinfo(genome=genome))
             
             gr.blackList <- GenomicRanges::trim(gr.blackList)
         } else {
@@ -134,7 +199,7 @@ getList <- function(blackList,genome){
     } else{
         gr.blackList <- blackList 
     }
-
+    
     return(gr.blackList)
 }
 
