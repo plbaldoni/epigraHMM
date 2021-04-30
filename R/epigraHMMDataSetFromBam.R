@@ -61,7 +61,6 @@
 #' @importFrom csaw maximizeCcf correlateReads readParam
 #' @importFrom data.table as.data.table
 #' @importFrom S4Vectors decode
-#' @importFrom RCurl url.exists
 #' 
 #' @examples
 #' bamFiles <- system.file("extdata","euratrans",
