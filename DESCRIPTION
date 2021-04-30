@@ -33,7 +33,7 @@ Imports:
     scales,
     ggpubr,
     ggplot2,
-    RCurl,
+    GreyListChIP,
     pheatmap,
     grDevices
 LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
