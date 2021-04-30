@@ -44,18 +44,12 @@ plotCounts = function(object,
                       hdf5 = metadata(object)$output,
                       peaks = NULL,
                       annotation = NULL) {
-    Sample = Counts = name = P = Window = NULL
+    Sample = Counts = name = P = Window = DTmelt =  NULL
     
     # Checking ranges
-    if (!((methods::is(ranges)[1] == "GRanges" &
-           length(ranges) == 1) |
-          (
-              methods::is(ranges)[1] %in% c("integer", "numeric") &
-              length(ranges) == 2
-          ))) {
-        stop(
-            'The argument ranges must be either a GRanges object with length one or a numeric vector of integers of length two'
-        )
+    if (!((methods::is(ranges)[1] == "GRanges" & length(ranges) == 1) | 
+          (methods::is(ranges)[1] %in% c("integer", "numeric") & length(ranges) == 2))) {
+        stop('The argument ranges must be either a GRanges object with length one or a numeric vector of integers of length two')
     }
     
     # If peaks/annotation is not NULL, then make sure data types are consistent
@@ -70,55 +64,18 @@ plotCounts = function(object,
     }
     subobject <- object[subsetIdx,]
     
-    
     mat <- as.matrix(SummarizedExperiment::assay(subobject, 'counts') / exp(SummarizedExperiment::assay(subobject, 'offsets')))
     DT <- data.table::as.data.table(mat)
     rm(mat)
     
     # Transforming the data (consensus or differential?)
     ifDifferential <- (length(unique(object$condition)) > 1)
-    if (ifDifferential) {
-        nameCol <-
-            paste0(unique(SummarizedExperiment::colData(object)$condition))
-        for (i in nameCol) {
-            DT[, paste0(i) := rowSums(.SD), .SDcols = which(SummarizedExperiment::colData(object)$condition ==i)]
-        }
-        DT <- DT[, nameCol, with = FALSE]
-    } else{
-        nameCol <-paste0('Replicate ',SummarizedExperiment::colData(object)$replicate)
-        data.table::setnames(DT, nameCol)
-    }
     
-    # Bringing in extra variables
-    if (methods::is(ranges)[1] == "GRanges") {
-        DT <- cbind(DT, as.data.table(rowRanges(object))[subsetIdx, c('seqnames', 'start', 'end', 'width', 'strand')])
-        DT[, Window := seq_len(.N)]
-        DTmelt <-data.table::melt(DT,
-                                  id.vars = c('Window', 'start'),
-                                  measure.vars = seq_len(ncol(DT) - 6),
-                                  value.name = 'Counts',
-                                  variable.name = 'Sample')
-        if (!is.null(peaks)) {
-            DTmelt[Sample == levels(Sample)[1], peaks := overlapsAny(subobject, peaks)]
-        }
-        if (!is.null(annotation)) {
-            DTmelt[Sample == levels(Sample)[1], annotation := overlapsAny(subobject, annotation)]
-        }
-    } else{
-        DT[, start := seq_len(nrow(object))[subsetIdx]]
-        DT[, Window := seq_len(.N)]
-        DTmelt <- data.table::melt(DT, 
-                                   id.vars = c('Window', 'start'),
-                                   measure.vars = seq_len(ncol(DT) - 2),
-                                   value.name = 'Counts',
-                                   variable.name = 'Sample')
-        if (!is.null(peaks)) {
-            DTmelt[Sample == levels(Sample)[1], peaks := peaks[subsetIdx]]
-        }
-        if (!is.null(annotation)) {
-            DTmelt[Sample == levels(Sample)[1], annotation := annotation[subsetIdx]]
-        }
-    }
+    DT <- aggregateCounts(DT,ifDifferential,object)
+    
+    # Melting data.table
+    list2env(meltCounts(DT,ranges,object,subobject,peaks,annotation,subsetIdx),
+             envir = environment())
     
     # Plotting counts
     fig.counts <- ggplot2::ggplot(data = DTmelt, ggplot2::aes(x = Window, y = Counts)) +
@@ -128,67 +85,69 @@ plotCounts = function(object,
         ggplot2::labs(y = 'Normalized Read Counts', x = 'Genomic Window') +
         ggplot2::theme(panel.grid = ggplot2::element_blank())
     
+    # Adding peak track
     if (!is.null(peaks)) {
-        fig.counts <- fig.counts + ggplot2::geom_rect(data = DTmelt[Sample == levels(Sample)[1], c(.SD, 'name' = 'Peaks')],
-                                                      ggplot2::aes(xmin = Window,
-                                                                   xmax = Window,
-                                                                   ymin = 0.99 * (max(DTmelt$Counts) + 5) * ifelse(peaks, peaks, NA),
-                                                                   ymax = 1.01 * (max(DTmelt$Counts) + 5) * ifelse(peaks, peaks, NA),
-                                                                   color = 'Peaks',fill = 'Peaks'),na.rm = TRUE) +
+        DT_anno <- DTmelt[Sample == levels(Sample)[1], c(.SD, 'name' = 'Peaks')]
+        fig.counts <- fig.counts + 
+            ggplot2::geom_rect(data = DT_anno,ggplot2::aes(xmin = Window,
+                                                           xmax = Window,
+                                                           ymin = 0.99 * (max(DTmelt$Counts) + 5) * ifelse(peaks, peaks, NA),
+                                                           ymax = 1.01 * (max(DTmelt$Counts) + 5) * ifelse(peaks, peaks, NA),
+                                                           color = 'Peaks',fill = 'Peaks'),na.rm = TRUE) +
             ggplot2::theme(legend.position = 'top',
                            legend.title = ggplot2::element_blank(),
                            legend.direction = 'horizontal')
     }
     
+    # Adding annotation
     if (!is.null(annotation)) {
-        fig.counts <- fig.counts + ggplot2::geom_rect(data = DTmelt[Sample == levels(Sample)[1], c(.SD, 'name' = 'Peaks')],
-                                                      ggplot2::aes(xmin = Window,
-                                                                   xmax = Window,
-                                                                   ymin = 0.99 * (max(DTmelt$Counts) + 10) * ifelse(annotation, annotation, NA),
-                                                                   ymax = 1.01 * (max(DTmelt$Counts) + 10) * ifelse(annotation, annotation, NA),
-                                                                   color = 'Annotation',
-                                                                   fill = 'Annotation'),na.rm = TRUE) +
+        DT_anno <- DTmelt[Sample == levels(Sample)[1], c(.SD, 'name' = 'Peaks')]
+        fig.counts <- fig.counts + 
+            ggplot2::geom_rect(data = DT_anno,ggplot2::aes(xmin = Window,
+                                                           xmax = Window,
+                                                           ymin = 0.99 * (max(DTmelt$Counts) + 10) * ifelse(annotation, annotation, NA),
+                                                           ymax = 1.01 * (max(DTmelt$Counts) + 10) * ifelse(annotation, annotation, NA),
+                                                           color = 'Annotation',fill = 'Annotation'),na.rm = TRUE) +
             ggplot2::theme(legend.position = 'top',
                            legend.title = ggplot2::element_blank(),
                            legend.direction = 'horizontal')
     }
     
-    # Plotting posterior probabilities
+    # Adding plotting posterior probabilities
     if (!is.null(hdf5)) {
-        fig.counts <- fig.counts + ggplot2::theme(axis.title.x = ggplot2::element_blank(),
-                                                  axis.line.x = ggplot2::element_blank(),
-                                                  axis.ticks.x = ggplot2::element_blank(),
-                                                  axis.text.x = ggplot2::element_blank()) +
+        
+        dtProb <- cbind(DTmelt[Sample == levels(Sample)[1], c(.SD, 'name' = 'Prob.')],
+                        'P' = exp(rhdf5::h5read(hdf5, 'logProb1')[subsetIdx, 2]))
+        
+        fig.counts <- fig.counts + 
+            ggplot2::theme(axis.title.x = ggplot2::element_blank(),
+                           axis.line.x = ggplot2::element_blank(),
+                           axis.ticks.x = ggplot2::element_blank(),
+                           axis.text.x = ggplot2::element_blank()) +
             ggplot2::scale_fill_manual(values = c('Peaks' = '#4B9CD3','Annotation' = '#151515'),
                                        labels = c('Peaks' = ifelse(ifDifferential,'Differential Peaks','Consensus Peaks'),'Annotation' = 'Annotation')) +
             ggplot2::scale_color_manual(values = c('Peaks' = '#4B9CD3','Annotation' = '#151515')) +
             ggplot2::guides(color = FALSE)
         
-        dtProb <- cbind(DTmelt[Sample == levels(Sample)[1], c(.SD, 'name' = 'Prob.')],
-                        'P' = exp(rhdf5::h5read(hdf5, 'logProb1')[subsetIdx, 2]))
-        
         fig.p <- ggplot2::ggplot(data = dtProb,ggplot2::aes(x = Window, y = P)) +
+            ggplot2::geom_area(position = 'identity', alpha = 0.75,
+                               color = '#4B9CD3',fill = '#4B9CD3') + 
             ggplot2::facet_grid(rows = ggplot2::vars(name)) +
-            ggplot2::geom_area(position = 'identity',
-                               alpha = 0.75,
-                               color = '#4B9CD3',
-                               fill = '#4B9CD3') +
             ggplot2::scale_y_continuous(limits = c(0, 1), breaks = c(0, 0.5, 1)) +
             ggplot2::theme_bw() +
             ggplot2::labs(y = 'Prob.') +
             ggplot2::theme(strip.text.y = ggplot2::element_text(colour = ggplot2::alpha('grey', 0.0)),
                            legend.position = "none",
                            panel.grid = ggplot2::element_blank()) +
-            ggplot2::scale_x_continuous(breaks = round(quantile(
-                DT$Window, c(0.25, 0.5, 0.75), names = FALSE
-            )),
-            labels = scales::comma(DT$start[round(quantile(DT$Window, c(0.25, 0.5, 0.75), names = FALSE))]))
+            ggplot2::scale_x_continuous(breaks = round(quantile(DT$Window, c(0.25, 0.5, 0.75), names = FALSE)),
+                                        labels = scales::comma(DT$start[round(quantile(DT$Window, c(0.25, 0.5, 0.75), names = FALSE))]))
         
         if (!methods::is(ranges)[1] == "GRanges") {
-            fig.p <- fig.p + ggplot2::labs(x = 'Genomic Window')
+            fig.p <- fig.p + 
+                ggplot2::labs(x = 'Genomic Window')
         } else{
-            fig.p <-
-                fig.p + ggplot2::labs(x = paste0('Genomic Window (', seqnames(ranges), ')'))
+            fig.p <- fig.p + 
+                ggplot2::labs(x = paste0('Genomic Window (', seqnames(ranges), ')'))
         }
         
         # Return
