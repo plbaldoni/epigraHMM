@@ -66,7 +66,7 @@ colData <- data.frame(condition = c('BN','BN'),replicate = c(1,2))
 object <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                   colData = colData,
                                   genome = 'rn4',
-                                  windowSize = 500,
+                                  windowSize = 1000,
                                   gapTrack = TRUE)
 
 # Creating normalizing offsets
@@ -131,18 +131,16 @@ The input `genome` can be either a single string with the name of the reference 
 
 If the optional `gapTrack = TRUE` and the name of a reference genome is passed as input through `genome` (e.g. 'hg19'), `epigraHMMDataSetFromBam` will discard any genomic coordinate overlapping regions specified by the respective [UCSC gap table](https://genome.ucsc.edu/cgi-bin/hgTables). If `gapTrack` is a *GRanges* object, the function will discard any genomic coordinate overlapping regions of `gapTrack`.
 
-If the optional `blackList = TRUE` and the name of a reference genome is passed as input through `genome` (e.g. 'hg19'), `epigraHMMDataSetFromBam` will fetch the manually curated [ENCODE blacklist tracks](https://github.com/Boyle-Lab/Blacklist/tree/master/lists) (Version 2). Current available genomes are ce10, dm3, hg19, hg38, and mm10. If `blackList` is a *GRanges* object, the function will discard any genomic coordinate overlapping regions from `blackList`
+If the optional `blackList = TRUE` and the name of a reference genome is passed as input through `genome` (e.g. 'hg19'), `epigraHMMDataSetFromBam` will fetch the curated [ENCODE blacklist tracks](https://sites.google.com/site/anshulkundaje/projects/blacklists) from the Bioconductor package [GreyListChIP](https://bioconductor.org/packages/release/bioc/html/GreyListChIP.html). Current available genomes are ce10, dm3, hg19, hg38, and mm10. If `blackList` is a *GRanges* object, the function will discard any genomic coordinate overlapping regions from `blackList`
 
 ```{r data_input_baminput}
 # Creating input for epigraHMM
 bamFiles <- system.file(package="chromstaRData","extdata","euratrans",
-                        c("lv-H3K4me3-BN-female-bio1-tech1.bam",
-                          "lv-H3K4me3-BN-male-bio2-tech1.bam",
-                          "lv-H3K4me3-SHR-male-bio2-tech1.bam",
+                        c("lv-H3K4me3-SHR-male-bio2-tech1.bam",
                           "lv-H3K4me3-SHR-male-bio3-tech1.bam"))
 
-colData <- data.frame(condition = c('BN','BN','SHR','SHR'),
-                      replicate = c(1,2,1,2))
+colData <- data.frame(condition = c('SHR','SHR'),
+                      replicate = c(1,2))
 
 # Creating epigraHMM object
 object_bam <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
@@ -191,7 +189,10 @@ library(BSgenome.Rnorvegicus.UCSC.rn4)
 
 # Toy example of utilization of gcapc for GC-content normalization with model offsets
 # See ?gcapc::refineSites for best practices
-object_gcExample <- object_bam[1e4:3e4,]
+
+# Below, subset object_bam simply to illustrate the use of `gcapc::refineSites`
+# with epigraHMM
+object_gcExample <- object_bam[2e4:5e4,]
 
 gcnorm <- gcapc::refineSites(counts = assay(object_gcExample),
                              sites = rowRanges(object_gcExample),
@@ -208,7 +209,7 @@ object_gcExample <- addOffsets(object = object_gcExample,
 
 We note that `addOffsets` will add offsets to any existing offset assay contained in *epigraHMMDataSet*. That is, in the example above, the resulting offsets from the output of `addOffsets(object_gcExample,offsets = gcnorm_offsets)` will be equal to `assay(object_gcExample,'offsets') + gcnorm_offsets`.
 
-Alternatively, epigraHMM may account for input control experiments when calling significant regions of enrichment of a given condition. To this end, epigraHMM directly models the effect of input control read counts in its HMM-embedded generalized linear model. Users interested in utilizing input control experiments in their analyses should pass either matrices of read counts or the paths to the control BAM files in the 'controls' entry of the input list *bamFiles* as below.
+Alternatively, epigraHMM may account for input control experiments when calling significant regions of enrichment of a given condition. To this end, epigraHMM directly models the effect of input control read counts in its HMM-embedded generalized linear model. Users interested in utilizing input control experiments in their analyses should pass either matrices of read counts or the paths to the control BAM files in the 'controls' entry of the input list *bamFiles* as below. To speed up the computing time, I utilize a window size of 1000 base pairs.
 
 ```{r data_input_controls}
 # Creating input for epigraHMM
@@ -225,7 +226,7 @@ colData <- data.frame(condition = 'BN',replicate = 1)
 object_bam <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                       colData = colData,
                                       genome = 'rn4',
-                                      windowSize = 500,
+                                      windowSize = 1000,
                                       gapTrack = TRUE)
 
 object_bam
@@ -245,7 +246,7 @@ The `control` argument should be a list of parameter specifications generated fr
 
 ### Multi-sample single-condition analysis
 
-If one is interested in detecting consensus peaks across multiple samples (or simply detecting peaks from a single-sample) of the same condition, epigraHMM can be used with the option `type = 'consensus'` as below.
+If one is interested in detecting consensus peaks across multiple samples (or simply detecting peaks from a single-sample) of the same condition, epigraHMM can be used with the option `type = 'consensus'` as below. To speed up the computing time, I utilize a window size of 1000 base pairs.
 
 ```{r data_peak_consensus,message = FALSE}
 # Creating input for epigraHMM
@@ -260,7 +261,7 @@ colData <- data.frame(condition = c('BN','BN'),
 object_consensus <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                             colData = colData,
                                             genome = 'rn4',
-                                            windowSize = 750,
+                                            windowSize = 1000,
                                             gapTrack = TRUE)
 
 # Normalizing counts
@@ -281,7 +282,7 @@ object_consensus <- epigraHMM(object = object_consensus,
 
 #### Differential peak calling
 
-If one is interested in detecting differential peaks across multiple samples collected under different conditions, epigraHMM can be used with the option `type = 'differential'` as below. Note that it is not mandatory for experimental conditions to have more than one technical or biological replicates. In principle, epigraHMM is able to call differential peaks under single-sample multi-condition designs. However, users are strongly encouraged to utilized as many technical/biological replicates per condition as possible in their analyses. epigraHMM provides better performance regarding sensitivity and false discovery rate (FDR) control when more replicates are utilized (see Web Figures 13-15 in [@baldoni2019efficient]).
+If one is interested in detecting differential peaks across multiple samples collected under different conditions, epigraHMM can be used with the option `type = 'differential'` as below. Note that it is not mandatory for experimental conditions to have more than one technical or biological replicates. In principle, epigraHMM is able to call differential peaks under single-sample multi-condition designs. However, users are strongly encouraged to utilized as many technical/biological replicates per condition as possible in their analyses. epigraHMM provides better performance regarding sensitivity and false discovery rate (FDR) control when more replicates are utilized (see Web Figures 13-15 in [@baldoni2019efficient]). To speed up the computing time, I utilize a window size of 1000 base pairs.
 
 ```{r data_peak_differential,message = FALSE}
 # Creating input for epigraHMM
@@ -298,7 +299,7 @@ colData <- data.frame(condition = c('BN','BN','SHR','SHR'),
 object_differential <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                                colData = colData,
                                                genome = 'rn4',
-                                               windowSize = 500,
+                                               windowSize = 1000,
                                                gapTrack = TRUE)
 
 # Normalizing counts
@@ -316,7 +317,7 @@ object_differential <- epigraHMM(object = object_differential,
 
 #### Genomic segmentation
 
-epigraHMM can also be used for genomic segmentation analyses. In this context, different experimental conditions in the argument `colData` are represented by different epigenomic marks, and differential peaks called by epigraHMM represent differential combinatorial chromatin states. In the example below, we utilize the histone modification marks H3K27me3 and H3K4me3 to find regions of differential enrichment.
+epigraHMM can also be used for genomic segmentation analyses. In this context, different experimental conditions in the argument `colData` are represented by different epigenomic marks, and differential peaks called by epigraHMM represent differential combinatorial chromatin states. In the example below, we utilize the histone modification marks H3K27me3 and H3K4me3 to find regions of differential enrichment. To speed up the computing time, I utilize a window size of 1000 base pairs.
 
 ```{r data_peak_segmentation,message = FALSE}
 # Creating input for epigraHMM
@@ -333,7 +334,7 @@ colData <- data.frame(condition = c('H3K27me3','H3K27me3','H3K4me3','H3K4me3'),
 object_segmentation <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                                colData = colData,
                                                genome = 'rn4',
-                                               windowSize = 500,
+                                               windowSize = 1000,
                                                gapTrack = TRUE)
 
 # Normalizing counts
@@ -384,7 +385,7 @@ library(GenomeInfoDb)
 
 session <- browserSession()
 genome(session) <- 'rn4'
-refSeq <- getTable(ucscTableQuery(session,table="refGene"))
+refSeq <- getTable(ucscTableQuery(session, table = "refGene"))
 
 annotation <- makeGRangesFromDataFrame(refSeq,
                                        starts.in.df.are.0based = TRUE,
@@ -420,7 +421,7 @@ epigraHMM provides the function `plotPatterns`, which plots a heatmap with the p
 
 ```{r viz_heatmap1}
 # Selecting target differential peak
-pattern_peak <- peaks_differential[peaks_differential$name == 'peak9']
+pattern_peak <- peaks_differential[peaks_differential$name == 'peak4']
 
 pattern_peak
 
@@ -434,7 +435,7 @@ Alternatively, one could also be interested in the second differential peak from
 
 ```{r viz_heatmap2}
 # Selecting target differential peak
-pattern_peak <- peaks_differential[peaks_differential$name == 'peak8']
+pattern_peak <- peaks_differential[peaks_differential$name == 'peak3']
 
 pattern_peak
 

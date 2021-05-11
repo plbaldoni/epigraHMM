@@ -72,13 +72,13 @@
 #' object <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
 #'                                   colData = colData,
 #'                                   genome = 'rn4',
-#'                                   windowSize = 1000,
+#'                                   windowSize = 25000,
 #'                                   gapTrack = TRUE,
 #'                                   blackList = TRUE)
 #'
 #' @export
 epigraHMMDataSetFromBam <- function(bamFiles,colData,genome,windowSize,
-                                    gapTrack = TRUE,blackList = TRUE){
+                                    gapTrack = TRUE, blackList = TRUE){
     
     condition = replicate = chrom = NULL
     
