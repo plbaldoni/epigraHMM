@@ -49,49 +49,49 @@
 #'
 #' @export
 cleanCounts <- function(object,effectNames,byNames = NULL,log = TRUE){
-
+    
     # Checking input
     if (!((methods::is(object)[1]%in%c('SummarizedExperiment','RangedSummarizedExperiment')) &
-        all(effectNames %in% assayNames(object)))){
+          all(effectNames %in% assayNames(object)))){
         if(!is.null(byNames)){
             if(!(byNames %in% assayNames(object))){
                 stop('Check arguments')
             }
         }
     }
-
+    
     # Looping through samples
-    offsets <- do.call(cbind,lapply(seq_len(ncol(assay(object,'counts'))),function(x){
-
+    offsets <- do.call(cbind,lapply(seq_len(ncol(SummarizedExperiment::assay(object,'counts'))),function(x){
+        
         offset <- rep(0,nrow(object))
-
+        
         ## Putting counts and covariates in a data.frame
-        mat <- data.frame(y = assay(object,'counts')[,x],
-                          X = do.call(cbind,lapply(seq_len(length(effectNames)),function(w){assay(object,effectNames[w])[,x]})),
-                          by = if (is.null(byNames)) rep(TRUE,nrow(object)) else assay(object,byNames)[,x],
-                          offsets = if ('offsets' %in% assayNames(object)) assay(object,'offsets')[,x] else rep(0,nrow(object)))
+        mat <- data.frame(y = SummarizedExperiment::assay(object,'counts')[,x],
+                          X = do.call(cbind,lapply(seq_len(length(effectNames)),function(w){SummarizedExperiment::assay(object,effectNames[w])[,x]})),
+                          by = if (is.null(byNames)) rep(TRUE,nrow(object)) else SummarizedExperiment::assay(object,byNames)[,x],
+                          offsets = if ('offsets' %in% assayNames(object)) SummarizedExperiment::assay(object,'offsets')[,x] else rep(0,nrow(object)))
         
         ## Log-transform
         if (log == TRUE){
             mat$X <- log1p(mat$X)
         }
-
+        
         ## Writing model formula
         form <- stats::as.formula(paste('y ~',paste0('splines::ns(',colnames(mat)[grep('^X.*',colnames(mat))],', df = 2)',collapse = ' + ')))
-
+        
         ## Looping by
         for(index in unique(mat$by)){
             fit <- MASS::glm.nb(form,data = mat[mat$by == index,])
             pred <- stats::predict(fit,type = "terms")
             offset[mat$by == index] <- rowSums(pred[,grep('s\\(',colnames(pred)),drop = FALSE])
         }
-
+        
         ## Returning offsets
         return(offset)
     }))
-
+    
     # Adding offsets
     object <- addOffsets(object,offsets)
-
+    
     return(object)
 }

@@ -77,46 +77,12 @@
 #'                                   blackList = TRUE)
 #'
 #' @export
-epigraHMMDataSetFromBam <- function(bamFiles,
-                                    colData,
-                                    genome,
-                                    windowSize,
-                                    gapTrack = TRUE,
-                                    blackList = TRUE){
+epigraHMMDataSetFromBam <- function(bamFiles,colData,genome,windowSize,
+                                    gapTrack = TRUE,blackList = TRUE){
     
     condition = replicate = chrom = NULL
     
-    # Checking if colData has the correct format
-    if(!(is.data.frame(colData) & all(c('condition','replicate')%in%names(colData)))){
-        stop("The argument colData must be a data.frame with the columns 'condition' and 'replicate'")
-    }
-    
-    # Checking whether replicates are unique
-    if(any(table(colData$condition)>1)){
-        if(nrow(unique(colData[,c('condition','replicate')]))<nrow(colData[,c('condition','replicate')])){
-            stop('The columns "condition" and "replicate" must uniquely represent your data')
-        }
-    }
-    
-    # Checking whether bamFiles is correct
-    if(is.list(bamFiles) & ('counts' %in% names(bamFiles))){
-        if(any(unlist(lapply(bamFiles,function(x){
-            return(!(is.character(x) & length(x)==nrow(colData) & all(file.exists(x)) & all(file.exists(paste0(x,'.bai')))))
-        })))){
-            stop("bamFiles is not a proper argument, check the help manual.")
-        }
-    } else{
-        if(!(is.character(bamFiles) & length(bamFiles)==nrow(colData) & all(file.exists(bamFiles)) & all(file.exists(paste0(bamFiles,'.bai'))))){
-            stop("bamFiles is not a proper argument, check the help manual.")
-        } else{
-            bamFiles <- list('counts' = bamFiles)
-        }
-    }
-    
-    # Checking whether windowSize is an integer
-    if(!(is.numeric(windowSize) & windowSize%%1==0)){
-        stop('The argument windowSize must be an integer number')
-    }
+    bamFiles <- checkInputBam(bamFiles,colData,genome,windowSize,gapTrack,blackList)
     
     # Setting up reference genome
     genomeList <- getGenome(genome,windowSize,bamFiles)
@@ -129,52 +95,35 @@ epigraHMMDataSetFromBam <- function(bamFiles,
     gr.blackList <- getList(blackList,genome)
     
     # Cleaning up the genome
-    gr.genome <- gr.genome[!IRanges::overlapsAny(gr.genome,IRanges::union(gr.gaps,gr.blackList))]
+    gr.genome <- gr.genome[!overlapsAny(gr.genome,union(gr.gaps,gr.blackList))]
     
     # Estimating the fragment length
     colData$fragLength <- getFragLen(bamFiles,gr.gaps,gr.blackList)
     
     # Computing read counts and adding to the output
     ctMat <- do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){
-        return(bamsignals::bamCount(bampath = bamFiles[['counts']][x],
-                                    gr = gr.genome,
-                                    verbose = FALSE,
-                                    shift = colData[['fragLength']][x]/2))
+        return(bamCount(bampath = bamFiles[['counts']][x],gr = gr.genome,verbose = FALSE,shift = colData[['fragLength']][x]/2))
     }))
     
-    ctMat <- matrix(ctMat,
-                    byrow = FALSE,
-                    nrow = length(gr.genome),
-                    ncol = nrow(colData),
+    ctMat <- matrix(ctMat,byrow = FALSE,nrow = length(gr.genome),ncol = nrow(colData),
                     dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))
     
-    epigraHMMDataSet <- SummarizedExperiment::SummarizedExperiment(assays = list(counts = ctMat),
-                                                                   rowRanges = gr.genome,
-                                                                   colData = colData)
+    epigraHMMDataSet <- SummarizedExperiment(assays = list(counts = ctMat),rowRanges = gr.genome,colData = colData)
     
     # Adding offsets
-    epigraHMMDataSet <- addOffsets(epigraHMMDataSet,
-                                   Matrix::Matrix(0,nrow = nrow(epigraHMMDataSet),
-                                                  ncol = ncol(epigraHMMDataSet),
-                                                  sparse = TRUE))
+    epigraHMMDataSet <- addOffsets(epigraHMMDataSet,Matrix(0,nrow = nrow(epigraHMMDataSet),ncol = ncol(epigraHMMDataSet),sparse = TRUE))
     
     # If there are controls, repeat
     if(!length(names(bamFiles)[-which(names(bamFiles)=='counts')]) == 0){
         for(idx in names(bamFiles)[-which(names(bamFiles)=='counts')]){
             tmp <- do.call(cbind,lapply(seq_len(nrow(colData)),FUN = function(x){
-                return(bamsignals::bamCount(bampath = bamFiles[[idx]][x],
-                                            gr = gr.genome,
-                                            verbose = FALSE))
+                bamCount(bampath = bamFiles[[idx]][x],gr = gr.genome,verbose = FALSE)
             }))
             dimnames(tmp) <- dimnames(SummarizedExperiment::assay(epigraHMMDataSet,'counts'))
             SummarizedExperiment::assay(epigraHMMDataSet,idx) <- tmp
         }
-        rm(tmp)
     }
     
-    # Sorting the object
-    
-    epigraHMMDataSet <- sortObject(epigraHMMDataSet)
-    
-    return(epigraHMMDataSet)
+    # Returning sorted the object
+    return(sortObject(epigraHMMDataSet))
 }

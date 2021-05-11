@@ -27,6 +27,7 @@
 #'
 #' @importFrom  methods is
 #' @importFrom SummarizedExperiment SummarizedExperiment rowRanges assay colData
+#' @importFrom Matrix Matrix
 #'
 #' @examples
 #'
@@ -40,86 +41,26 @@ epigraHMMDataSetFromMatrix <- function(countData,colData,rowRanges = NULL){
 
     condition = replicate = NULL
 
-    # Checking if colData has the correct format
-
-    if(!(is.data.frame(colData) & all(c('condition','replicate')%in%names(colData)))){
-        stop("The argument colData must be a data.frame with the columns 'condition' and 'replicate'")
-    }
-
-    # Checking whether replicates are unique
-
-    if(any(table(colData$condition)>1)){
-        if(nrow(unique(colData[,c('condition','replicate')]))<nrow(colData[,c('condition','replicate')])){
-            stop('The columns "condition" and "replicate" must uniquely represent your data')
-        }
-    }
-
-    # Checking whether countData is a matrix or a list of matrices
-
-    if(!is.matrix(countData)){
-        if(!(all(unlist(lapply(countData,is.matrix))) & !is.null(names(countData)) & (nrow(unique(do.call(rbind,lapply(countData,dim)))) == 1) & ('counts' %in% names(countData)))){
-            stop("countData is not a proper argument, check the help manual.")
-        }
-    } else{
-        countData <- list('counts' = countData)
-    }
-
-    # Checking rowRanges
-
-    if(!(methods::is(rowRanges)[1]=="GRanges" | is.null(rowRanges))){
-        stop("rowRanges must be a GRanges object")
-    }
-
-    # Checking dimensions
-    if(is.null(rowRanges)){
-        if(is.list(countData)){
-            if(!(nrow(colData)==unique(unlist(lapply(countData,ncol))))){
-                stop('Distinct dimensions of countData and colData are not allowed')
-            }
-        } else{
-            if(!(nrow(colData)==ncol(countData))){
-                stop('Distinct dimensions of countData and colData are not allowed')
-            }
-        }
-
-    } else{
-        if(is.list(countData)){
-            if(!(nrow(colData)==unique(unlist(lapply(countData,ncol))) &
-                 unique(unlist(lapply(countData,nrow))) == length(rowRanges))){
-                stop('Distinct dimensions of countData, colData, and rowRanges are not allowed')
-            }
-        } else{
-            if(!(nrow(colData)==ncol(countData) &
-                 nrow(countData) == length(rowRanges))){
-                stop('Distinct dimensions of countData, colData, and rowRanges are not allowed')
-            }
-        }
-    }
+    # Checking input matrix
+    countData <- checkInputMatrix(countData,colData,rowRanges)
 
     # Saving final output
-
-    epigraHMMDataSet <- SummarizedExperiment::SummarizedExperiment(assays = list(counts = matrix(countData[['counts']],
-                                                                                                 byrow = FALSE,
-                                                                                                 nrow = nrow(countData[['counts']]),
-                                                                                                 ncol = ncol(countData[['counts']]),
-                                                                                                 dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))),
-                                                                   colData = colData)
+    epigraHMMDataSet <- SummarizedExperiment(assays = list(counts = matrix(countData[['counts']],
+                                                                           byrow = FALSE,
+                                                                           nrow = nrow(countData[['counts']]),
+                                                                           ncol = ncol(countData[['counts']]),
+                                                                           dimnames = list(NULL,paste(colData$condition,colData$replicate,sep='.')))),
+                                             colData = colData)
 
     # Adding offsets
-    
-    epigraHMMDataSet <- addOffsets(epigraHMMDataSet,Matrix::Matrix(0,
-                                                                   nrow = nrow(epigraHMMDataSet),
-                                                                   ncol = ncol(epigraHMMDataSet),
-                                                                   sparse = TRUE))
+    epigraHMMDataSet <- addOffsets(epigraHMMDataSet,Matrix(0,nrow = nrow(epigraHMMDataSet),
+                                                           ncol = ncol(epigraHMMDataSet),
+                                                           sparse = TRUE))
     
     # Adding rowRanges
-
-    if(!is.null(rowRanges)){
-        SummarizedExperiment::rowRanges(epigraHMMDataSet) <- rowRanges
-    }
+    if(!is.null(rowRanges)) SummarizedExperiment::rowRanges(epigraHMMDataSet) <- rowRanges
 
     # Adding additional matrices
-
     if(!is.matrix(countData)){
         for(idx in names(countData)[-which(names(countData)=='counts')]){
             dimnames(countData[[idx]]) <- dimnames(SummarizedExperiment::assay(epigraHMMDataSet,'counts'))
@@ -127,9 +68,6 @@ epigraHMMDataSetFromMatrix <- function(countData,colData,rowRanges = NULL){
         }
     }
     
-    # Sorting the object
-    
-    epigraHMMDataSet <- sortObject(epigraHMMDataSet)
-
-    return(epigraHMMDataSet)
+    # Returning sorted the object
+    return(sortObject(epigraHMMDataSet))
 }

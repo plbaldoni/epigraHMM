@@ -34,109 +34,52 @@
 #' control <- controlEM(maxIterEM = 100)
 #'
 #' @export
-controlEM = function(epsilonEM=c('MRCPE' = 1e-3, 'MACPE' = 1e-3,'ARCEL' = 1e-3),
-                     maxIterEM=500,
-                     minIterEM=3,
-                     gapIterEM=3,
-                     maxCountEM=3,
-                     maxDisp=1000,
-                     criterion='all',
-                     minZero=.Machine$double.xmin,
-                     probCut=0.05,
-                     quiet=TRUE,
-                     maxIterInnerEM = 5,
-                     epsilonInnerEM = 1e-3,
-                     trimOffset = 3,
-                     pattern = NULL,
-                     tempDir = tempdir(),
-                     fileName = 'epigraHMM') {
-    
-    # Checks for epsilonEM
-    
-    if (!(is.numeric(epsilonEM) & all(epsilonEM>0))){stop("epsilonEM must be a positive numerical value (or vector)")}
+controlEM = function(epsilonEM=c('MRCPE' = 1e-3, 'MACPE' = 1e-3,'ARCEL' = 1e-3),maxIterEM=500,
+                     minIterEM=3,gapIterEM=3,maxCountEM=3,maxDisp=1000,criterion='all',
+                     minZero=.Machine$double.xmin,probCut=0.05,quiet=TRUE,maxIterInnerEM = 5,
+                     epsilonInnerEM = 1e-3,trimOffset = 3,pattern = NULL,tempDir = tempdir(),fileName = 'epigraHMM') {
     
     # Check names for epsilonEM
-    internalEpsilonEM <- c('MRCPE' = 1e-4, 'MACPE' = 1e-4,'ARCEL' = 1e-6)
+    internalEpsilonEM <- c('MRCPE' = 1e-3, 'MACPE' = 1e-3,'ARCEL' = 1e-3)
     
-    if(!is.null(names(epsilonEM))){
-        for(i in names(epsilonEM)[names(epsilonEM) %in% names(internalEpsilonEM)]){
+    if(!is.null(names(epsilonEM)))
+        for(i in names(epsilonEM)[names(epsilonEM) %in% names(internalEpsilonEM)])
             internalEpsilonEM[i] <- epsilonEM[i]
-        }
-    }
+    
     epsilonEM <- internalEpsilonEM
     
-    # Checks for maxit.em
+    # Checking input
+    if (!(is.numeric(epsilonEM) & all(epsilonEM>0))){stop("epsilonEM must be a positive numerical value (or vector)")}
     
-    if (!maxIterEM%%1==0 || maxIterEM <= 0){stop("value of 'maxIterEM' must be a positive integer")}
-    
-    # Checks for minIterEM
-    
-    if (!minIterEM%%1==0 || minIterEM <= 0){stop("value of 'minIterEM' must be a positive integer")}
-    
-    # Checks for gapIterEM
+    if ((!maxIterEM%%1==0 || maxIterEM <= 0) | (!minIterEM%%1==0 || minIterEM <= 0)){stop("maxIterEM and minIterEM must be a positive integer")}
     
     if (!gapIterEM%%1==0 || gapIterEM <= 0 || gapIterEM>minIterEM){stop("value of 'gapIterEM' must be a positive integer <= minIterEM")}
     
-    # Checks for maxCountEM
-    
     if (!maxCountEM%%1==0 || maxCountEM <= 0){stop("value of 'maxCountEM' must be a positive integer")}
-    
-    # Checks for maxDisp
     
     if (!is.numeric(maxDisp) || maxDisp <= 0){stop("value of 'maxDisp' must be > 0")}
     
-    # Checks for criterion
-    
     if (any((length(criterion)==1 & criterion %in% c('MRCPE','MACPE','ARCEL','ACC','all'))==FALSE)){stop("value of 'criterion' must be 'MRCPE', 'MACPE', 'ARCEL', 'ACC', or 'all'")}
-    
-    # Checks for minZero
     
     if (!(is.numeric(minZero) & minZero>0 & length(minZero)==1)){stop("'minZero' must be a positive numeric value")}
     
-    # Checks for probCut
-    
     if (!(length(probCut)==1 & is.numeric(probCut) & probCut>0 & probCut<1)){stop("'probCut' must be a value between 0 and 1")}
-    
-    # Checks for quiet
     
     if (!(length(quiet)==1 & is.logical(quiet))){stop("'quiet' must be a logical value")}
     
-    # Checks for maxIterInnerEM
-    
     if (!maxIterInnerEM%%1==0 || maxIterInnerEM <= 0){stop("value of 'maxIterInnerEM' must be a positive integer")}
-    
-    # Checks for epsilonInnerEM
     
     if (!(length(epsilonInnerEM)==1 & is.numeric(epsilonInnerEM) & epsilonInnerEM>0)){stop("'epsilonInnerEM' must be a positive value")}
     
-    # Checks for trimOffset
-    
     if (!is.null(trimOffset)){if (!trimOffset%%1==0 || trimOffset <= 0){stop("value of 'trimOffset' must be a positive integer")}}
     
-    # Checks for pattern
-    
     if (!is.null(pattern)){if (!is.list(pattern)){stop("'pattern' must be NULL or a list'")}}
-    
-    # Checks for maxIterEM
     
     if (!dir.exists(tempDir)){stop("Temporary directory tempDir does not exist. Create it prior to execution.")} else{tempDir <- normalizePath(tempDir)}
     
     # Return
-    
-    list(epsilonEM=epsilonEM,
-         minZero=minZero,
-         maxIterEM=maxIterEM,
-         minIterEM=minIterEM,
-         gapIterEM=gapIterEM,
-         maxCountEM=maxCountEM,
-         maxDisp=maxDisp,
-         criterion=criterion,
-         probCut=probCut,
-         quiet=quiet,
-         maxIterInnerEM=maxIterInnerEM,
-         epsilonInnerEM=epsilonInnerEM,
-         trimOffset=trimOffset,
-         pattern = pattern,
-         tempDir = tempDir,
-         fileName = fileName)
+    list(epsilonEM=epsilonEM,minZero=minZero,maxIterEM=maxIterEM,minIterEM=minIterEM,
+         gapIterEM=gapIterEM,maxCountEM=maxCountEM,maxDisp=maxDisp,criterion=criterion,
+         probCut=probCut,quiet=quiet,maxIterInnerEM=maxIterInnerEM,epsilonInnerEM=epsilonInnerEM,
+         trimOffset=trimOffset,pattern = pattern,tempDir = tempDir,fileName = fileName)
 }

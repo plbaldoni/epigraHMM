@@ -64,14 +64,10 @@ plotPatterns = function(object,
                         colors = NULL) {
 
     # Checking if differential analysis
-    if (!(length(unique(object$condition)) > 1)){
-        stop('Only one condition is present in the object input.')
-    }
+    if (!(length(unique(object$condition)) > 1)) stop('Only one condition is present in the object input.')
     
     # Checking if hdf5 file exists
-    if(!file.exists(hdf5)){
-        stop('The hdf5 file does not exist.')
-    }
+    if(!file.exists(hdf5)) stop('The hdf5 file does not exist.')
     
     # Reading in posterior probabilties and patterns
     postprob <- rhdf5::h5read(hdf5,'mixtureProb')
@@ -79,11 +75,7 @@ plotPatterns = function(object,
     patterns <- unlist(lapply(patterns,function(x){paste(unique(object$condition)[as.numeric(gregexpr('E',x)[[1]])],collapse = '-')}))
 
     # Subsetting
-    if (methods::is(ranges)[1] == "GRanges") {
-        sub_index <- overlapsAny(object, ranges)
-    } else{
-        sub_index <- seq(ranges[1], ranges[2])
-    }
+    sub_index <- if (methods::is(ranges)[1] == "GRanges") overlapsAny(object, ranges) else seq(ranges[1], ranges[2])
     sub_object <- object[sub_index,]
     sub_postprob <- postprob[sub_index,]
     colnames(sub_postprob) <- patterns
@@ -93,13 +85,9 @@ plotPatterns = function(object,
     sub_postprob[!diff_index,] <- NA
     
     # Annotation 
-    if(is.null(colors)){
-        colors <- grDevices::palette.colors(n = 10, "Tableau 10")
-    }
+    if(is.null(colors)) colors <- grDevices::palette.colors(n = 10, "Tableau 10")
     
-    if(length(colors)<ncol(sub_postprob)){
-        stop('Insufficient number of colors. Please provide ',ncol(sub_postprob),' different colors.')
-    }
+    if(length(colors)<ncol(sub_postprob)) stop('Insufficient number of colors. Please provide ',ncol(sub_postprob),' different colors.')
         
     anno_colors <- list('Pattern' = colors[seq_len(ncol(sub_postprob))])
     names(anno_colors[['Pattern']]) <- colnames(sub_postprob)
@@ -115,8 +103,7 @@ plotPatterns = function(object,
                                      unique(seqnames(sub_object)),':',
                                      scales::comma(min(start(sub_object))),'-',
                                      scales::comma(max(end(sub_object))),')'),
-                       labels_row = 'Genomic\nWindows',
-                       annotation_names_col = FALSE)
+                       labels_row = 'Genomic\nWindows',annotation_names_col = FALSE)
     
     return(fig)
 }

@@ -49,93 +49,29 @@
 #'                    method = 'viterbi')
 #'
 #' @export
-callPeaks = function(object,
-                     hdf5 = metadata(object)$output,
-                     method = 'viterbi',
-                     saveToFile = FALSE,
-                     control = NULL)
+callPeaks = function(object,hdf5 = metadata(object)$output,method = 'viterbi',
+                     saveToFile = FALSE,control = NULL)
 {
     subjectHits = i = NULL
     
     # Checking if hdf5 exists
-    if(!file.exists(hdf5)){
-        stop('Input hdf5 file does not exist')
-    }
+    if(!file.exists(hdf5)) stop('Input hdf5 file does not exist')
 
     # Calling peaks
-    prob <- exp(rhdf5::h5read(hdf5,'logProb1')[,2])
-    if(method=='viterbi'){
-        peakindex <- (rhdf5::h5read(hdf5,'viterbi')[,1]==1)
-    } else{
-        if(is.numeric(method) & method>0 & method<1){
-            peakindex <- fdrControl(prob = prob,fdr = method)
-        } else{
-            stop('The argument method is not valid')
-        }
-    }
+    prob <- exp(h5read(hdf5,'logProb1')[,2])
+    peakindex <- if(method=='viterbi') (h5read(hdf5,'viterbi')[,1]==1) else fdrControl(prob = prob,fdr = method)
     
     # If there is no rowRanges, return vector
-    if(is.null(rowRanges(object))){
-        return(peakindex)
-    }
+    if(is.null(rowRanges(object))) return(peakindex)
     
-    gr.graph <- SummarizedExperiment::rowRanges(object)[peakindex]
-    gr.bed <- GenomicRanges::reduce(gr.graph)
+    gr.graph <- rowRanges(object)[peakindex]
+    gr.bed <- reduce(gr.graph)
 
     # Summarize the output
     gr.bed$name <- paste0(paste0('peak',seq_len(length(gr.bed))))
 
     # File names
-    if(saveToFile){
-        
-        # Adding necessary columns for browser
-        gr.bed$score <- 1000*data.table::as.data.table(IRanges::findOverlaps(gr.bed,SummarizedExperiment::rowRanges(object)))[,mean(prob[subjectHits]),by='queryHits']$V1
-        gr.bed$thickStart <- GenomicRanges::start(gr.bed)
-        gr.bed$thickEnd <- GenomicRanges::end(gr.bed)
-        
-        chrset <- as.character(unique(SummarizedExperiment::seqnames(SummarizedExperiment::rowRanges(object))))
-        
-        filePath <- file.path(path.expand(control[['tempDir']]),paste0(control[['fileName']],'_',c('peaks.bed',paste0('prob_',chrset,'.wig'))))
-        filenames <- vapply(filePath,checkPath,FUN.VALUE = 'character',USE.NAMES = FALSE)
-        names(filenames) <- c('peaks',paste0('prob_',chrset))
-
-        # Writing bed file with peaks
-        dt.bed <- data.frame(chrom=SummarizedExperiment::seqnames(gr.bed),chromStart=SummarizedExperiment::start(gr.bed),
-                             chromEnd=SummarizedExperiment::end(gr.bed),name=gr.bed$name,score=gr.bed$score,strand='.',
-                             thickStart=gr.bed$thickStart,thickEnd=gr.bed$thickEnd)
-        
-        writeBed(dt.bed,control,method,filenames)
-
-        # Writing wig files with posterior probabilities
-        dt.bigwig <- data.frame(chrom=SummarizedExperiment::seqnames(SummarizedExperiment::rowRanges(object)),
-                                chromStart=SummarizedExperiment::start(SummarizedExperiment::rowRanges(object)),
-                                chromEnd=SummarizedExperiment::end(SummarizedExperiment::rowRanges(object)),
-                                prob=prob)
-        
-        writeWig(object,chrset,dt.bigwig,control,filenames)
-        rm(dt.bigwig)
-
-        # Writing bedGraph files for mixture probabilities
-        if(length(unique((colData(object)[['condition']])))>1){
-
-            mixProbSet <- rhdf5::h5read(hdf5,'mixturePatterns')
-            wigPath <- file.path(path.expand(control[['tempDir']]),paste0(control[['fileName']],'_',paste0('mixProb_',mixProbSet,'.wig')))
-            filenames <- c(filenames,vapply(wigPath,checkPath,FUN.VALUE = 'character',USE.NAMES = FALSE))
-            names(filenames)[names(filenames)==""] <- mixProbSet
-
-            for(i in seq_len(length(mixProbSet))){
-
-                dt.bedgraph = data.frame(chrom=SummarizedExperiment::seqnames(gr.graph),chromStart=SummarizedExperiment::start(gr.graph),
-                                         chromEnd=SummarizedExperiment::end(gr.graph),
-                                         mixProb=rhdf5::h5read(hdf5,'mixtureProb')[peakindex,i])
-                
-                writeBedGraph(dt.bed,dt.bedgraph,control,mixProbSet[i],filenames)
-            }
-        }
-
-        message('The following files have been saved:')
-        for(i in seq_len(length(filenames))){message(filenames[i])}
-    }
+    if(saveToFile) saveOutputFiles(gr.bed,object,control,hdf5)
 
     return(gr.bed)
 }
