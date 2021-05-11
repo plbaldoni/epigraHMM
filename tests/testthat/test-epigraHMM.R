@@ -2,14 +2,14 @@ test_that("check if HDF5 output has the correct attributes (consensus peak calli
     
     # Creating dummy object
     set.seed(210423)
-    countData <- rbind(matrix(rnbinom(2e3,mu = 2,size = 10),ncol = 2),
-                       matrix(rnbinom(4e3,mu = 10,size = 2),ncol = 2),
-                       matrix(rnbinom(2e3,mu = 2,size = 10),ncol = 2))
+    countData <- rbind(matrix(rnbinom(2e2,mu = 2,size = 10),ncol = 2),
+                       matrix(rnbinom(4e2,mu = 10,size = 2),ncol = 2),
+                       matrix(rnbinom(2e2,mu = 2,size = 10),ncol = 2))
     
     colData <- data.frame(condition = c('A','A'), replicate = c(1,2))
     
     rowRanges <- GenomicRanges::GRanges('chrA',
-                                        IRanges::IRanges(start = seq(from = 1, length.out = 4e3,by = 250),width = 250))
+                                        IRanges::IRanges(start = seq(from = 1, length.out = 4e2,by = 250),width = 250))
     
     object <- epigraHMMDataSetFromMatrix(countData,colData,rowRanges)
     
@@ -17,7 +17,7 @@ test_that("check if HDF5 output has the correct attributes (consensus peak calli
     object <- initializer(object,controlEM())
     
     # Running epigraHMM
-    object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
+    object <- epigraHMM(object,controlEM(maxIterEM = 2),type = 'consensus',dist = 'nb')
     
     # Tests
     output <- metadata(object)$output
@@ -31,7 +31,7 @@ test_that("check if HDF5 output has the correct attributes (consensus peak calli
     
     ## Check dimensions
     expect_true(all(unlist(lapply(rhdf5::h5ls(output)$name,function(x){
-        nrow(rhdf5::h5read(output,x)) == 4e3
+        nrow(rhdf5::h5read(output,x)) == 4e2
     }))))
     
     ## Check content
@@ -45,14 +45,14 @@ test_that("check if HDF5 output has the correct attributes (consensus peak calli
     
     # Creating dummy object
     set.seed(210423)
-    countData <- rbind(matrix(rnbinom(2e3,mu = 2,size = 10),ncol = 2),
-                       matrix(rnbinom(4e3,mu = 10,size = 2),ncol = 2),
-                       matrix(rnbinom(2e3,mu = 2,size = 10),ncol = 2))
+    countData <- rbind(matrix(rnbinom(2e2,mu = 2,size = 10),ncol = 2),
+                       matrix(rnbinom(4e2,mu = 10,size = 2),ncol = 2),
+                       matrix(rnbinom(2e2,mu = 2,size = 10),ncol = 2))
     
     colData <- data.frame(condition = c('A','A'), replicate = c(1,2))
     
     rowRanges <- GenomicRanges::GRanges('chrA',
-                                        IRanges::IRanges(start = seq(from = 1, length.out = 4e3,by = 250),width = 250))
+                                        IRanges::IRanges(start = seq(from = 1, length.out = 4e2,by = 250),width = 250))
     
     object <- epigraHMMDataSetFromMatrix(countData,colData,rowRanges)
     
@@ -60,7 +60,7 @@ test_that("check if HDF5 output has the correct attributes (consensus peak calli
     object <- initializer(object,controlEM())
     
     # Running epigraHMM
-    object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'zinb')
+    object <- epigraHMM(object,controlEM(maxIterEM = 2),type = 'consensus',dist = 'zinb')
     
     # Tests
     output <- metadata(object)$output
@@ -74,7 +74,7 @@ test_that("check if HDF5 output has the correct attributes (consensus peak calli
     
     ## Check dimensions
     expect_true(all(unlist(lapply(rhdf5::h5ls(output)$name,function(x){
-        nrow(rhdf5::h5read(output,x)) == 4e3
+        nrow(rhdf5::h5read(output,x)) == 4e2
     }))))
     
     ## Check content
@@ -88,20 +88,20 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     
     # Creating dummy object
     set.seed(210423)
-    countData <- cbind(rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)),
-                       rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)))
+    countData <- cbind(rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)),
+                       rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)))
     
     colData <- data.frame(condition = c('A','B'), replicate = c(1,1))
     rowRanges <- GenomicRanges::GRanges('chrA',
@@ -114,7 +114,7 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     object <- initializer(object,controlEM())
     
     # Running epigraHMM
-    object <- epigraHMM(object,controlEM(),type = 'differential',dist = 'nb')
+    object <- epigraHMM(object,controlEM(maxIterEM = 2),type = 'differential',dist = 'nb')
     
     # Tests
     output <- metadata(object)$output
@@ -129,7 +129,7 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     
     ## Check dimensions
     expect_true(all(unlist(lapply(rhdf5::h5ls(output)$name[-6],function(x){
-        nrow(rhdf5::h5read(output,x)) == 7e3
+        nrow(rhdf5::h5read(output,x)) == 7e2
     }))))
     
     ## Check content
@@ -143,20 +143,20 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     
     # Creating dummy object
     set.seed(210423)
-    countData <- cbind(rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)),
-                       rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)))
+    countData <- cbind(rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)),
+                       rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)))
     
     colData <- data.frame(condition = c('A','B'), replicate = c(1,1))
     rowRanges <- GenomicRanges::GRanges('chrA',
@@ -169,7 +169,7 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     object <- initializer(object,controlEM())
     
     # Running epigraHMM
-    object <- epigraHMM(object,controlEM(),type = 'differential',dist = 'zinb')
+    object <- epigraHMM(object,controlEM(maxIterEM = 2),type = 'differential',dist = 'zinb')
     
     # Tests
     output <- metadata(object)$output
@@ -184,7 +184,7 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     
     ## Check dimensions
     expect_true(all(unlist(lapply(rhdf5::h5ls(output)$name[-6],function(x){
-        nrow(rhdf5::h5read(output,x)) == 7e3
+        nrow(rhdf5::h5read(output,x)) == 7e2
     }))))
     
     ## Check content

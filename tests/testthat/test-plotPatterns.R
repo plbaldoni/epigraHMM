@@ -1,20 +1,20 @@
 test_that("check if plot is working as it should",{
     
     # Creating dummy object
-    countData <- cbind(rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)),
-                       rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)))
+    countData <- cbind(rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)),
+                       rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)))
     
     colData <- data.frame(condition = c('A','B'), replicate = c(1,1))
     rowRanges <- GenomicRanges::GRanges('chrA',
@@ -27,7 +27,7 @@ test_that("check if plot is working as it should",{
     object <- initializer(object,controlEM())
     
     # Running epigraHMM
-    object <- epigraHMM(object,controlEM(),type = 'differential',dist = 'nb')
+    object <- epigraHMM(object,controlEM(maxIterEM = 2),type = 'differential',dist = 'nb')
     
     # Calling peaks
     peaks <- callPeaks(object = object,
