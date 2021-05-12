@@ -200,7 +200,7 @@ gcnorm <- gcapc::refineSites(counts = assay(object_gcExample),
                              genome = 'rn4')
 
 # gcapc::refineSites outputs counts/2^gce
-gcnorm_offsets <- log2((assay(object_gcExample)+1)/(gcnorm+1))
+gcnorm_offsets <- log2((assay(object_gcExample) + 1) / (gcnorm + 1))
 
 # Adding offsets to epigraHMM object
 object_gcExample <- addOffsets(object = object_gcExample,
@@ -280,8 +280,6 @@ object_consensus <- epigraHMM(object = object_consensus,
 
 ### Multi-sample, multiple-condition analysis
 
-#### Differential peak calling
-
 If one is interested in detecting differential peaks across multiple samples collected under different conditions, epigraHMM can be used with the option `type = 'differential'` as below. Note that it is not mandatory for experimental conditions to have more than one technical or biological replicates. In principle, epigraHMM is able to call differential peaks under single-sample multi-condition designs. However, users are strongly encouraged to utilized as many technical/biological replicates per condition as possible in their analyses. epigraHMM provides better performance regarding sensitivity and false discovery rate (FDR) control when more replicates are utilized (see Web Figures 13-15 in [@baldoni2019efficient]). To speed up the computing time, I utilize a window size of 1000 base pairs.
 
 ```{r data_peak_differential,message = FALSE}
@@ -315,42 +313,6 @@ object_differential <- epigraHMM(object = object_differential,
                                  type = 'differential')
 ```
 
-#### Genomic segmentation
-
-epigraHMM can also be used for genomic segmentation analyses. In this context, different experimental conditions in the argument `colData` are represented by different epigenomic marks, and differential peaks called by epigraHMM represent differential combinatorial chromatin states. In the example below, we utilize the histone modification marks H3K27me3 and H3K4me3 to find regions of differential enrichment. To speed up the computing time, I utilize a window size of 1000 base pairs.
-
-```{r data_peak_segmentation,message = FALSE}
-# Creating input for epigraHMM
-bamFiles <- system.file(package="chromstaRData","extdata","euratrans",
-                        c("lv-H3K27me3-SHR-male-bio2-tech1.bam",
-                          "lv-H3K27me3-SHR-male-bio3-tech1.bam",
-                          "lv-H3K4me3-SHR-male-bio2-tech1.bam",
-                          "lv-H3K4me3-SHR-male-bio3-tech1.bam"))
-
-colData <- data.frame(condition = c('H3K27me3','H3K27me3','H3K4me3','H3K4me3'),
-                      replicate = c(1,2,1,2))
-
-# Creating epigraHMM object
-object_segmentation <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
-                                               colData = colData,
-                                               genome = 'rn4',
-                                               windowSize = 1000,
-                                               gapTrack = TRUE)
-
-# Normalizing counts
-object_segmentation <- normalizeCounts(object_segmentation,
-                                       control = controlEM())
-
-# Initializing epigraHMM
-object_segmentation <- initializer(object_segmentation,controlEM())
-
-# Differential peak calling
-object_segmentation <- epigraHMM(object = object_segmentation,
-                                 control = controlEM(),
-                                 type = 'differential',
-                                 dist = 'nb')
-```
-
 ### Calling peaks
 
 Consensus or differential peaks can be called with epigraHMM's `callPeaks` function, which takes as input the *epigraHMM* object output (argument `object`). By default, the most likely (consensus or differential) peak regions are presented by `callPeaks`, which utilizes the Viterbi algorithm to this end. Alternatively, users may want to specify a particular FDR control thresholding level through the argument `method`. For example `method = 0.05` requests `callPeaks` to define peak regions while controlling for the FDR of 0.05 on the window level. Neighboring significant windows that pass a given FDR threshold level are merged to form consensus or differential regions of enrichment.
@@ -363,11 +325,6 @@ peaks_consensus
 ```{r peaks_differential}
 peaks_differential <- callPeaks(object = object_differential)
 peaks_differential
-```
-
-```{r peaks_segmentation}
-peaks_segmentation <- callPeaks(object = object_segmentation)
-peaks_segmentation
 ```
 
 ## Data visualization
