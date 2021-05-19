@@ -31,20 +31,20 @@ A pheatmat
 }
 \examples{
 # Creating dummy object
-countData <- cbind(rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)),
-                   rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
-                         matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)))
+countData <- cbind(rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)),
+                   rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
+                         matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)))
 
 colData <- data.frame(condition = c('A','B'), replicate = c(1,1))
 rowRanges <- GenomicRanges::GRanges('chrA',
