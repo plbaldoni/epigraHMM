@@ -88,20 +88,20 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     
     # Creating dummy object
     set.seed(210423)
-    countData <- cbind(rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)),
-                       rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)))
+    countData <- cbind(rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)),
+                       rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)))
     
     colData <- data.frame(condition = c('A','B'), replicate = c(1,1))
     rowRanges <- GenomicRanges::GRanges('chrA',
@@ -114,10 +114,10 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     object <- initializer(object,controlEM())
     
     # Running epigraHMM
-    object <- epigraHMM(object,controlEM(maxIterEM = 2),type = 'differential',dist = 'nb')
+    object <- epigraHMM(object,controlEM(maxIterEM = 5),type = 'differential',dist = 'nb')
     
     # Tests
-    output <- metadata(object)$output
+    output <- S4Vectors::metadata(object)$output
     
     ## File exists
     expect_true(file.exists(output))
@@ -129,7 +129,7 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     
     ## Check dimensions
     expect_true(all(unlist(lapply(rhdf5::h5ls(output)$name[-6],function(x){
-        nrow(rhdf5::h5read(output,x)) == 7e2
+        nrow(rhdf5::h5read(output,x)) == 7e3
     }))))
     
     ## Check content
@@ -143,20 +143,20 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     
     # Creating dummy object
     set.seed(210423)
-    countData <- cbind(rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)),
-                       rbind(matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 10, size = 5), ncol = 1),
-                             matrix(rnbinom(1e2, mu = 1, size = 10), ncol = 1)))
+    countData <- cbind(rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)),
+                       rbind(matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 10, size = 5), ncol = 1),
+                             matrix(rnbinom(1e3, mu = 1, size = 10), ncol = 1)))
     
     colData <- data.frame(condition = c('A','B'), replicate = c(1,1))
     rowRanges <- GenomicRanges::GRanges('chrA',
@@ -169,10 +169,10 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     object <- initializer(object,controlEM())
     
     # Running epigraHMM
-    object <- epigraHMM(object,controlEM(maxIterEM = 2),type = 'differential',dist = 'zinb')
+    object <- epigraHMM(object,controlEM(maxIterEM = 5),type = 'differential',dist = 'zinb')
     
     # Tests
-    output <- metadata(object)$output
+    output <- S4Vectors::metadata(object)$output
     
     ## File exists
     expect_true(file.exists(output))
@@ -184,7 +184,7 @@ test_that("check if HDF5 output has the correct attributes (differential peak wi
     
     ## Check dimensions
     expect_true(all(unlist(lapply(rhdf5::h5ls(output)$name[-6],function(x){
-        nrow(rhdf5::h5read(output,x)) == 7e2
+        nrow(rhdf5::h5read(output,x)) == 7e3
     }))))
     
     ## Check content
