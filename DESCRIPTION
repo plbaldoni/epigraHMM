@@ -1,12 +1,12 @@
 Package: epigraHMM
 Title: Epigenomic R-based analysis with hidden Markov models
-Version: 0.99.10
+Version: 0.99.11
 Date: 2019-12-10
 Authors@R: c(person("Pedro", "Baldoni", email = "pedrobaldoni@gmail.com", role = c("aut","cre")))
 biocViews: ChIPSeq, ATACSeq, DNaseSeq, HiddenMarkovModel, Epigenetics
 Description: epigraHMM provides a set of tools for the analysis of epigenomic data 
     based on hidden Markov Models. It contains two separate peak callers, one for consensus peaks
-    from biological/technical replicates, and and one for differial peaks from multi-replicate 
+    from biological/technical replicates, and one for differial peaks from multi-replicate 
     multi-condition experiments. For the latter, window-specific posterior probabilities associated 
     with read count enrichment for every possible combinatorial pattern are provided.
 License: MIT + file LICENSE
