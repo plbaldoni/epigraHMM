@@ -72,7 +72,7 @@ colData <- data.frame(condition = 'SHR', replicate = 1)
 object <- epigraHMMDataSetFromBam(bamFiles = bamFiles,
                                   colData = colData,
                                   genome = 'rn4',
-                                  windowSize = 1000,
+                                  windowSize = 25000,
                                   gapTrack = TRUE,
                                   blackList = TRUE)
 
