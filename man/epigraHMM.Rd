@@ -16,7 +16,7 @@ epigraHMM(object, control, type, dist = "nb")
 \item{dist}{character, either \code{"zinb"} or \code{"nb"} (default)}
 }
 \value{
-To be added
+An epigraHMMDataSet object with the results from epigraHMM
 }
 \description{
 This function runs either consensus (one condition, multiple samples) or
