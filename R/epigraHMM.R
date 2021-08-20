@@ -11,7 +11,7 @@
 #'
 #' @return
 #'
-#' To be added
+#' An epigraHMMDataSet object with the results from epigraHMM
 #'
 #' @author Pedro L. Baldoni, \email{pedrobaldoni@gmail.com}
 #' @references
