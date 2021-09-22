@@ -53,10 +53,22 @@ getGenome <- function(genome,windowSize,bamFiles){
 ### Get blacklist
 ################################################################################
 
+#' @importFrom GenomeInfoDb genome
 getList <- function(blackList,genome){
     if (!methods::is(blackList)[1] == "GRanges") {
         greyItems <- utils::data(package = 'GreyListChIP')$results[,'Item']
-        dataExists <- paste0(genome,'.blacklist') %in% greyItems
+        
+        if (is.character(genome)) {
+            dataExists <- paste0(genome,'.blacklist') %in% greyItems
+        } else{
+            genomeName <- unique(GenomeInfoDb::genome(genome))
+            if (length(genomeName) == 1) {
+                dataExists <- paste0(genomeName,'.blacklist') %in% greyItems
+            } else{
+                dataExists <- FALSE
+            }
+        }
+
         if (isTRUE(blackList) & is.character(genome) & dataExists) {
             greyName <- system.file(file.path('data',paste0(genome,'.blacklist.RData')),
                                     package = "GreyListChIP")
@@ -125,7 +137,7 @@ posteriorProbPlot <- function(fig.counts,DT,ifDifferential,hdf5,DTmelt,subsetIdx
                            axis.text.x = ggplot2::element_blank()) +
             ggplot2::scale_fill_manual(values = myColors,labels = myLabels) +
             ggplot2::scale_color_manual(values = myColors) +
-            ggplot2::guides(color = FALSE)
+            ggplot2::guides(color = 'none')
         fig.p <- ggplot2::ggplot(data = dtProb,ggplot2::aes(x = Window, y = P)) +
             ggplot2::geom_area(position = 'identity', alpha = 0.75,
                                color = '#4B9CD3',fill = '#4B9CD3') + 
@@ -150,7 +162,7 @@ posteriorProbPlot <- function(fig.counts,DT,ifDifferential,hdf5,DTmelt,subsetIdx
         fig <- fig.counts + ggplot2::scale_x_continuous(breaks = xBreaks,labels = xLabels) +
             ggplot2::scale_fill_manual(values = myColors,labels = myLabels) +
             ggplot2::scale_color_manual(values = myColors) +
-            ggplot2::guides(color = FALSE)
+            ggplot2::guides(color = 'none')
         # Return
         if (!methods::is(ranges)[1] == "GRanges") {
             fig <- fig + ggplot2::labs(x = 'Genomic Window')

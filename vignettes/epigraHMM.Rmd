@@ -48,7 +48,7 @@ Exported functions from epigraHMM are fully documented. Users looking for help f
 
 ## Quick start
 
-The code chunk below presents the main steps of the analysis of epigenomic data using epigraHMM. In this vignette, we utilize ChIP-seq data from the Bioconductor package `chromstaRData`.
+The code chunk below presents the main steps of the analysis of epigenomic data using epigraHMM. epigraHMM imports functions from `GenomicRanges` and `SummarizedExperiment` for its internal computations. We will use some of these imported functions in this vignette to demonstrate the utilization of epigraHMM. Therefore, we load these two packages explicitly here. In this vignette, we utilize ChIP-seq data from the Bioconductor package `chromstaRData`.
 
 ```{r introduction_workflow}
 library(GenomicRanges)
@@ -129,9 +129,13 @@ The input `colData` must contain variables named as **condition** and **replicat
 
 The input `genome` can be either a single string with the name of the reference genome (e.g. 'hg19') or a *GRanges* object with the chromosome lengths of the reference genome. By default, the function `epigraHMMDataSetFromBam` calls [GenomeInfoDb::Seqinfo](https://bioconductor.org/packages/release/bioc/html/GenomeInfoDb.html) to fetch the chromosome lengths of the specified genome. See `?GenomeInfoDb::fetchExtendedChromInfoFromUCSC` for the list of UCSC genomes that are currently supported. The input `windowSize` must be an integer value specifying the size of genomic windows where read counts will be computed.
 
-If the optional `gapTrack = TRUE` and the name of a reference genome is passed as input through `genome` (e.g. 'hg19'), `epigraHMMDataSetFromBam` will discard any genomic coordinate overlapping regions specified by the respective [UCSC gap table](https://genome.ucsc.edu/cgi-bin/hgTables). If `gapTrack` is a *GRanges* object, the function will discard any genomic coordinate overlapping regions of `gapTrack`.
+#### About gap and blacklisted regions
 
-If the optional `blackList = TRUE` and the name of a reference genome is passed as input through `genome` (e.g. 'hg19'), `epigraHMMDataSetFromBam` will fetch the curated [ENCODE blacklist tracks](https://sites.google.com/site/anshulkundaje/projects/blacklists) from the Bioconductor package [GreyListChIP](https://bioconductor.org/packages/release/bioc/html/GreyListChIP.html). Current available genomes are ce10, dm3, hg19, hg38, and mm10. If `blackList` is a *GRanges* object, the function will discard any genomic coordinate overlapping regions from `blackList`
+By default, epigraHMM will exclude regions that overlap any genomic position intersecting gap and blacklisted regions as follows.
+
+If the optional `gapTrack = TRUE` (default) and the name of a reference genome is passed as input through `genome` (e.g. 'hg19'), `epigraHMMDataSetFromBam` will discard any genomic coordinate overlapping regions specified by the respective [UCSC gap table](https://genome.ucsc.edu/cgi-bin/hgTables). If `gapTrack` is a *GRanges* object, the function will discard any genomic coordinate overlapping regions of `gapTrack`.
+
+If the optional `blackList = TRUE` (default) and the name of a reference genome is passed as input through `genome` (e.g. 'hg19'), `epigraHMMDataSetFromBam` will fetch the curated [ENCODE blacklist tracks](https://sites.google.com/site/anshulkundaje/projects/blacklists) from the Bioconductor package [GreyListChIP](https://bioconductor.org/packages/release/bioc/html/GreyListChIP.html). Current available genomes are those supported by GreyListChIP and include worm ('ce10' and 'ce11'), fly ('dm3' and 'dm6'), human ('hg19' and 'hg38'), and mouse ('mm9' and 'mm10'). If `blackList` is a *GRanges* object, the function will discard any genomic coordinate overlapping regions from `blackList`.
 
 ```{r data_input_baminput}
 # Creating input for epigraHMM
@@ -400,6 +404,57 @@ plotPatterns(object = object_differential,
              ranges = pattern_peak,
              peaks = peaks_differential)
 ```
+
+## Miscellaneous
+
+### Posterior probabilities and associated differential enrichment
+
+The combinatorial patterns associated with each of the mixture components can be accessed from the output object itself as below with the function `info`.
+
+```{r misc_patterns}
+# Getting object information
+info(object_differential)
+```
+
+Because we are assessing the enrichment of reads between only two conditions in this particular example, the only possible differential combinatorial patterns are either enrichment in BN condition only (mixture component 1) or enrichment in SHR condition only (mixture component 2).
+
+To extract the differential combinatorial patterns (or posterior probabilities) associated with differential regions, one can use the function `callPatterns` as below.
+
+```{r misc_probs}
+# Getting posterior probabilties
+callPatterns(object = object_differential,peaks = peaks_differential,type = 'all')
+```
+
+Instead, one can directly obtain the most likely specific differential pattern associated with the differential regions.
+
+```{r misc_max}
+# Getting most likely differential enrichment
+callPatterns(object = object_differential,peaks = peaks_differential,type = 'max')
+```
+
+### Selecting the optimal number of differential combinatorial patterns of enrichment
+
+A central question when performing a genomic segmentation analysis is: how are the epigenomic marks being analyzed co-occurring across the genome? Answering this question not only allows one to make better sense of the biology behind the statistical analysis, but also provides a way to simplify the interpretation of the final results. With epigraHMM, this question can be rephrased as: what are the most common differential combinatorial patterns of local read enrichment observed in the data?
+
+By default, epigraHMM will model every possible differential combinatorial pattern of enrichment for a given set of epigenomic marks. However, it is possible to request epigraHMM to 'prune' combinatorial patterns of enrichment that are not often observed across the genome. For instance, when analyzing a repressive mark (e.g. H3K27me3) and a activating mark (e.g. H3K36me3) together, it is expected that the local co-occurrence of read enrichment for these marks will be rare. epigraHMM can remove such rare patterns automatically and, as a result, gives a more concise set of results.
+
+In the example below, we perform a genomic segmentation using the epigenomic marks EZH2, H3K27me3, and H3K36me3. epigraHMM comes with an internal dataset `helas3` with read counts from ChIP-seq experiments from these marks (with two replicates each), for a particular subset of chromosome 19 (genome hg19). By setting `pruningThreshold = 0.05` in `controlEM()`, epigraHMM will sequentially prune any differential combinatorial pattern of enrichment with a mixture posterior proportion smaller than 0.05, starting from the full model. Optionally, we can set `quietPruning = FALSE` to allow epigraHMM to print out messages with statistics about the iterative pruning.
+
+```{r misc_pruning,message = TRUE}
+data('helas3')
+
+control <- controlEM(pruningThreshold = 0.05,quietPruning = FALSE)
+
+object <- normalizeCounts(object = helas3,control)
+
+object <- initializer(object = object,control)
+
+object <- epigraHMM(object = object,control = control,type = 'differential')
+```
+
+The resulting combinatorial patterns are: enrichment of H3K36me3 alone, and co-enrichment of EZH2-H3K27me3. This makes sense, given the activating and silencing nature of H3K36me3 and EZH2-H3K27me3, respectively.
+
+Because only rare combinatorial patterns of enrichment were removed, the percentage change in BIC (in comparison to the full model) is minimal. epigraHMM starts with mixture components associated with all possible patterns, and only those that exhibit a small posterior mixture proportion are removed. These should not contribute to the model likelihood after all.
 
 # Theory
 

@@ -71,8 +71,7 @@ plotPatterns = function(object,
     
     # Reading in posterior probabilties and patterns
     postprob <- rhdf5::h5read(hdf5,'mixtureProb')
-    patterns <- rhdf5::h5read(hdf5,'mixturePatterns')
-    patterns <- unlist(lapply(patterns,function(x){paste(unique(object$condition)[as.numeric(gregexpr('E',x)[[1]])],collapse = '-')}))
+    patterns <- getPatterns(x = object,hdf5 = hdf5)
 
     # Subsetting
     sub_index <- if (methods::is(ranges)[1] == "GRanges") overlapsAny(object, ranges) else seq(ranges[1], ranges[2])
