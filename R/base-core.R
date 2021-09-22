@@ -140,9 +140,19 @@ differentialHMM = function(object,control,dist){
         data.table::rbindlist(lapply(outerEMDifferential[['parHist']],function(x){
             data.table::data.table(t(unlist(x)))
         }))
-    S4Vectors::metadata(object) <- list('output' = hdf5File,'control' = control,
-                                        'history' = list('control' = controlHistory,
-                                                         'parameter' = parHistory))
+    
+    patterns <- getPatterns(x = object,hdf5 = hdf5File)
+    posterior <- parHistory[nrow(parHistory),
+                            paste0('delta',seq_len(length(patterns))),
+                            with = FALSE]
+    patterns <- 
+        S4Vectors::DataFrame(Component = seq_len(length(patterns)),
+                             Enrichment = patterns,
+                             PosteriorProportion = as.numeric(posterior))
+    
+    S4Vectors::metadata(object) <- 
+        list('output' = hdf5File,'control' = control,'components' = patterns,
+             'history' = list('control' = controlHistory,'parameter' = parHistory))
     return(object)
 }
 

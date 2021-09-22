@@ -1,0 +1,55 @@
+#' ENCODE ChIP-seq broad data from Helas3 cell line
+#'
+#' Data from EZH2, H3K27me3, and H3K36me3 ChIP-seq data from Helas3 cell line.
+#' For illustrative purposes, the data has been subset to chromosome 19. The 
+#' dataset contains two replicates from each mark.
+#'
+#' @docType data
+#'
+#' @usage data(helas3)
+#'
+#' @format An object of class \code{"epigraHMMDataSet"}.
+#'
+#' @keywords datasets
+#'
+#' @references Davis et al. (2018) NAR 46(D1):D794-D801.
+#' (\href{https://pubmed.ncbi.nlm.nih.gov/29126249/}{PubMed})
+#'
+#' @source \href{http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeBroadHistone/}{ENCODE Broad Histone}
+#'
+#' @examples
+#' # # # The data 'helas3' was created as follows.
+#' # options(timeout=9999999)
+#' # 
+#' # url <- 'http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeBroadHistone/'
+#' # samples <- c('wgEncodeBroadHistoneHelas3H3k36me3StdAlnRep1.bam',
+#' #              'wgEncodeBroadHistoneHelas3H3k36me3StdAlnRep2.bam',
+#' #              'wgEncodeBroadHistoneHelas3H3k27me3StdAlnRep1.bam',
+#' #              'wgEncodeBroadHistoneHelas3H3k27me3StdAlnRep2.bam',
+#' #              'wgEncodeBroadHistoneHelas3Ezh239875AlnRep1.bam',
+#' #              'wgEncodeBroadHistoneHelas3Ezh239875AlnRep2.bam')
+#' # 
+#' # input <- paste0(url,samples)
+#' # output <- paste0(tempdir(),samples)
+#' # 
+#' # for(idx in seq_len(length(input))){
+#' #     download.file(url = input[idx],destfile = output[idx])
+#' #     download.file(url = paste0(input[idx],'.bai'),
+#' #                   destfile = paste0(output[idx],'.bai'))
+#' # }
+#' # 
+#' # gr <- segmentGenome(genome = 'hg19',
+#' #                     window = 1000,rm.gap = TRUE,rm.blacklist = TRUE)
+#' # 
+#' # cData <- data.frame(condition = rep(c('H3K36me3','H3K27me3','EZH2'),each = 2),
+#' #                     replicate = rep(c(1,2),times = 3))
+#' # 
+#' # subGr <- gr[seqnames(gr) == 'chr19' & start(gr) >= 40e6 & end(gr) <= 50e6]
+#' # 
+#' # helas3 <-
+#' #     epigraHMMDataSetFromBam(bamFiles = output,colData = cData,
+#' #                             genome = subGr,windowSize = 1000)
+#' 
+#' data(helas3)
+#' helas3
+"helas3"

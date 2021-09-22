@@ -19,11 +19,18 @@
 #' @param pattern either NULL (the default) or a list with length equal to the number of differential patterns to be modeled by the differential HMM state. See Details section below.
 #' @param tempDir a string where results will be saved. Default is `tempdir()`.
 #' @param fileName a string with the name of the result files. Default is `epigraHMM`.
+#' @param pruningThreshold a numeric value between 0 and 1 to consider when pruning rare combinatorial patterns. Default is NULL (see Details).
+#' @param quietPruning a logical indicating whether to print messages during the pruning step. Default is TRUE.
 #'
 #' @details
 #' If \code{pattern} is NULL, every possible combinatorial pattern will be considered. If \code{pattern} is a list, elements of it should specify the differential patterns to be modeled by each mixture component.
 #' For instance, if pattern = list(2,c(1,3)) the mixture model will have two components that will represent the enrichment of condition 2 alone and the enrichment of conditions 1 and 3 together.
-#'
+#' 
+#' If \code{pruningThreshold} is a value between 0 and 1, say 0.05, epigraHMM 
+#' will sequentially remove differential combinatorial patterns of enrichment 
+#' from any mixture model component with associated posterior mixture proportion
+#' less than 0.05.
+#' 
 #' @return A list with components equal to the arguments
 #'
 #' @author Pedro L. Baldoni, \email{pedrobaldoni@gmail.com}
@@ -37,7 +44,8 @@
 controlEM = function(epsilonEM=c('MRCPE' = 1e-3, 'MACPE' = 1e-3,'ARCEL' = 1e-3),maxIterEM=500,
                      minIterEM=3,gapIterEM=3,maxCountEM=3,maxDisp=1000,criterion='all',
                      minZero=.Machine$double.xmin,probCut=0.05,quiet=TRUE,maxIterInnerEM = 5,
-                     epsilonInnerEM = 1e-3,trimOffset = 3,pattern = NULL,tempDir = tempdir(),fileName = 'epigraHMM') {
+                     epsilonInnerEM = 1e-3,trimOffset = 3,pattern = NULL,tempDir = tempdir(),fileName = 'epigraHMM',
+                     pruningThreshold = NULL, quietPruning = TRUE) {
     
     # Check names for epsilonEM
     internalEpsilonEM <- c('MRCPE' = 1e-3, 'MACPE' = 1e-3,'ARCEL' = 1e-3)
@@ -77,9 +85,14 @@ controlEM = function(epsilonEM=c('MRCPE' = 1e-3, 'MACPE' = 1e-3,'ARCEL' = 1e-3),
     
     if (!dir.exists(tempDir)){stop("Temporary directory tempDir does not exist. Create it prior to execution.")} else{tempDir <- normalizePath(tempDir)}
     
+    if (!is.null(pruningThreshold)){if (pruningThreshold <= 0 || pruningThreshold >= 1){stop("value of 'pruningThreshold' must be between (0,1)")}}
+    
+    if (!(length(quietPruning)==1 & is.logical(quietPruning))){stop("'quietPruning' must be a logical value")}
+    
     # Return
     list(epsilonEM=epsilonEM,minZero=minZero,maxIterEM=maxIterEM,minIterEM=minIterEM,
          gapIterEM=gapIterEM,maxCountEM=maxCountEM,maxDisp=maxDisp,criterion=criterion,
          probCut=probCut,quiet=quiet,maxIterInnerEM=maxIterInnerEM,epsilonInnerEM=epsilonInnerEM,
-         trimOffset=trimOffset,pattern = pattern,tempDir = tempDir,fileName = fileName)
+         trimOffset=trimOffset,pattern = pattern,tempDir = tempDir,fileName = fileName,
+         pruningThreshold=pruningThreshold,quietPruning=quietPruning)
 }
