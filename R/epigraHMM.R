@@ -79,7 +79,12 @@ epigraHMM = function(object,control,type,dist = 'nb'){
     if(type == 'consensus'){
         object <- consensusHMM(object = object,control = control,dist = dist)
     } else{
-        object <- differentialHMM(object = object,control = control,dist = dist)
+        if(!is.null(control[['pruningThreshold']])){
+            object <- prunePatterns(object = object,control = control,dist = dist)
+        } else{
+            object <- 
+                differentialHMM(object = object,control = control,dist = dist)
+        }
     }
     return(object)
 }
