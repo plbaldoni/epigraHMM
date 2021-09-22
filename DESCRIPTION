@@ -38,7 +38,7 @@ Imports:
     pheatmap,
     grDevices
 LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Encoding: UTF-8
 SystemRequirements: GNU make
 Suggests: 
@@ -50,3 +50,4 @@ Suggests:
     gcapc,
     chromstaRData
 VignetteBuilder: knitr
+LazyData: true
