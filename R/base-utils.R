@@ -93,9 +93,9 @@ meltCounts <- function(DT,ranges,object,subobject,peaks,annotation,subsetIdx) {
                                                          with = FALSE])
         DT[, Window := seq_len(.N)]
         DTmelt <- data.table::melt(DT,id.vars = c('Window', 'start'),
-                                  measure.vars = seq_len(ncol(DT) - 6),
-                                  value.name = 'Counts',
-                                  variable.name = 'Sample')
+                                   measure.vars = seq_len(ncol(DT) - 6),
+                                   value.name = 'Counts',
+                                   variable.name = 'Sample')
         if (!is.null(peaks)) {
             DTmelt[Sample == levels(Sample)[1], {
                 peaks := overlapsAny(subobject, peaks) 
@@ -354,4 +354,111 @@ controlList <- function(time = 0,
                 'q' = q,
                 'error' = c('MRCPE' = MRCPE[['error']], 'MACPE' = MACPE[['error']], 'ARCEL' = ARCEL[['error']]),
                 'count' = c('MRCPE' = MRCPE[['count']], 'MACPE' = MACPE[['count']], 'ARCEL' = ARCEL[['count']])))
+}
+
+################################################################################
+### Get combinatorial patterns
+################################################################################
+
+getPatterns <- function(x,hdf5){
+    patterns <- rhdf5::h5read(hdf5,'mixturePatterns')
+    conditions <- unique(x$condition)
+    out <- unlist(lapply(patterns,function(x){
+        paste(conditions[as.numeric(gregexpr('E',x)[[1]])],collapse = '-')
+    }))
+    return(out)
+}
+
+################################################################################
+### Print message during combinatorial pattern prunning
+################################################################################
+
+verbosePrunning <- function(level,control, info = NULL,
+                            patternTable = NULL, idxReduced = NULL, BIC = NULL){
+    if (isFALSE(control[['quietPruning']])) {
+        if (level == 1) {
+            message(rep('#',80))
+            message('Full model (BIC = ',
+                    formatC(info$BIC,digits = 2,format = 'f'),')\n')
+            message(paste0(utils::capture.output(info$Components),
+                           collapse = "\n"))
+            message(rep('#',80))
+            message('Prunning enrichment patterns\n')
+        }
+        if (level == 2) {
+            p <- formatC(patternTable$PosteriorProportion[idxReduced],
+                         digits = 2,format = 'e')
+            message(paste0('- ',patternTable$Enrichment[idxReduced],
+                           ' (p = ',p,')',' ... '),appendLF = FALSE)
+        }
+        if (level == 3) {
+            bicChange <- formatC(100*(BIC - info$BIC)/info$BIC,
+                                 digits = 2,format = 'f')
+            message('% BIC rel. change = ',bicChange,'.')
+        }
+        if (level == 4) {
+            message(rep('#',80))
+            message('Reduced model (BIC = ',
+                    formatC(info$BIC,digits = 2,format = 'f'),')\n')
+            message(paste0(utils::capture.output(info$Components),
+                           collapse = "\n"))
+            message(rep('#',80))
+        }   
+    }
+}
+
+################################################################################
+### Prune differential combinartorial patterns of enrichment
+################################################################################
+
+prunePatterns <- function(object,control,dist){
+    Enrichment = NULL
+    
+    threshold <- control[['pruningThreshold']]
+    control['pruningThreshold'] <- list(NULL)
+    
+    # Fit full model
+    fitFull <- epigraHMM(object = object,control = control,type = 'differential',dist = dist)
+    info_fitFull <- info(fitFull)
+    patternTable <- info_fitFull$Components
+    conditionTable <- 
+        as.data.table(patternTable[!grepl("-",patternTable$Enrichment),-3])
+    # Verbose
+    verbosePrunning(level = 1,control = control,info = info_fitFull)
+    
+    # Pruning states
+    while (any(patternTable$PosteriorProportion < threshold)) {
+        # Removing meta
+        unlink(metadata(fitFull)$output)
+        # Find rarest pattern
+        idx_Reduced <- which.min(patternTable$PosteriorProportion)
+        subPatternTable <- patternTable[-idx_Reduced,]
+        # Verbose
+        verbosePrunning(level = 2,control = control,patternTable = patternTable,
+                        idxReduced = idx_Reduced)
+        # Setting combinatorial patterns
+        control[['pattern']] <- 
+            lapply(seq_len(nrow(subPatternTable)),function(x){
+                comp <- as.character(subPatternTable[x,]$Enrichment)
+                comp <- strsplit(comp,'-')[[1]]
+                comp <- lapply(comp,function(z){
+                    conditionTable[Enrichment == z,]$Component
+                })
+                unlist(comp)
+            })
+        # Fit reduced model
+        fitReduced <- 
+            epigraHMM(object = object,control = control,type = 'differential',dist = dist)
+        info_fitReduced <- info(fitReduced)
+        patternTable <- info_fitReduced$Components
+        verbosePrunning(level = 3,control = control,BIC = info_fitReduced$BIC,
+                        info = info_fitFull)
+    }
+    
+    # Verbose
+    verbosePrunning(level = 4,control = control,info = info_fitReduced)
+    
+    S4Vectors::metadata(fitReduced)$control[['pruningThreshold']] <- threshold
+    
+    return(fitReduced)
 }
