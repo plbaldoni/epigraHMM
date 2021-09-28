@@ -1,6 +1,6 @@
 Package: epigraHMM
 Title: Epigenomic R-based analysis with hidden Markov models
-Version: 1.1.5
+Version: 1.1.6
 Date: 2019-12-10
 Authors@R: c(person("Pedro", "Baldoni", email = "pedrobaldoni@gmail.com", role = c("aut","cre")))
 biocViews: ChIPSeq, ATACSeq, DNaseSeq, HiddenMarkovModel, Epigenetics
