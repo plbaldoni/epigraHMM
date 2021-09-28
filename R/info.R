@@ -39,8 +39,8 @@
 #' @export
 info <- function(object){
     
-    out <- list('BIC' = tail(metadata(object)$history$control$bic,1),
-                'logLikelihood' = tail(metadata(object)$history$control$q,1))
+    out <- list('BIC' = utils::tail(metadata(object)$history$control$bic,1),
+                'logLikelihood' = utils::tail(metadata(object)$history$control$q,1))
     
     if(length(unique(object$condition))>1){
         out[['Components']] = metadata(object)$components
