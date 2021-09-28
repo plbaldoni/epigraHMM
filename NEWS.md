@@ -22,3 +22,32 @@ gap tracks and blacklisted regions.
 # epigraHMM 1.0.3
 
 * Minor updates in the NEWS file as well as the README page.
+
+# epigraHMM 1.0.4
+
+* Adding function `callPatterns` to exp[ort] combinatorial patterns (or posterior 
+probabilities) associated with a given set of genomic regions. 
+
+* Adding function `info` to print summary statistics from epigraHMM output. This
+function will print the model's BIC, log-likelihood, and combinatorial patterns
+associated with mixture model components.
+
+* Adding new example dataset `helas3` with ENCODE ChIP-seq data from broad 
+epigenomic marks H3K27me3, H3K36me3, and EZH2.
+
+* Adding option to prune combinatorial patterns associated with rare states. See
+vignette for details.
+
+* In differential peak calling, epigraHMM now exports combinatorial pattern 
+table. See vignette for details.
+
+* Improvement of the vignette to clarify epigraHMM's use of blacklisted regions
+and gap tracks.
+
+# epigraHMM 1.0.5
+
+* Minor bug fix in callPatterns and info function (explict import of
+S4Vectors::mcols and utils::tail).
+
+* Exporting expStep function, which implements the E-step of EM algorithm
+(forward-backward & Viterbi algorithm) for a K-state HMM.

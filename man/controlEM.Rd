@@ -20,7 +20,9 @@ controlEM(
   trimOffset = 3,
   pattern = NULL,
   tempDir = tempdir(),
-  fileName = "epigraHMM"
+  fileName = "epigraHMM",
+  pruningThreshold = NULL,
+  quietPruning = TRUE
 )
 }
 \arguments{
@@ -56,6 +58,10 @@ controlEM(
 \item{tempDir}{a string where results will be saved. Default is `tempdir()`.}
 
 \item{fileName}{a string with the name of the result files. Default is `epigraHMM`.}
+
+\item{pruningThreshold}{a numeric value between 0 and 1 to consider when pruning rare combinatorial patterns. Default is NULL (see Details).}
+
+\item{quietPruning}{a logical indicating whether to print messages during the pruning step. Default is TRUE.}
 }
 \value{
 A list with components equal to the arguments
@@ -66,6 +72,11 @@ This function passes controlling parameters for the EM algorithm implemented in 
 \details{
 If \code{pattern} is NULL, every possible combinatorial pattern will be considered. If \code{pattern} is a list, elements of it should specify the differential patterns to be modeled by each mixture component.
 For instance, if pattern = list(2,c(1,3)) the mixture model will have two components that will represent the enrichment of condition 2 alone and the enrichment of conditions 1 and 3 together.
+
+If \code{pruningThreshold} is a value between 0 and 1, say 0.05, epigraHMM 
+will sequentially remove differential combinatorial patterns of enrichment 
+from any mixture model component with associated posterior mixture proportion
+less than 0.05.
 }
 \examples{
 # No more than 100 EM iterations
