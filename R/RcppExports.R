@@ -25,6 +25,37 @@ differentialRejectionControlled <- function(hdf5, f, p, N) {
     .Call(`_epigraHMM_differentialRejectionControlled`, hdf5, f, p, N)
 }
 
+#' E-step of HMM (forward-backward probability + posterior probability calculation)
+#' @param pi a vector of probabilities (sum of probabilities should sum to one)
+#' @param gamma a matrix of transition probabilities (row sums should be one)
+#' @param logf a matrix of observed log-likelihood values. Columns represent
+#' hidden states, rows represent genomic regions
+#' @param hdf5 path to where the hdf5 is saved
+#'
+#' @examples
+#' #Creating dummy object
+#' countData <- rbind(matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1),
+#'                   matrix(rnbinom(2e3,mu = 7.5,size = 5),ncol = 1),
+#'                   matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1))
+#'
+#'
+#'
+#' colData <- data.frame(condition = 'A', replicate = 1)
+#' object <- epigraHMMDataSetFromMatrix(countData,colData)
+#'
+#' #Initializing
+#' object <- initializer(object,controlEM())
+#'
+#' #Running epigraHMM
+#' object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
+#'
+#' #Example
+#' expStep(pi = c(0.99,0.02),
+#'        gamma = matrix(c(0.99,0.01,0.01,0.99),nrow = 2),
+#'        logf = cbind(dnbinom(rnbinom(100,mu = 2,size = 10),mu = 2,size = 10,log = TRUE),
+#'                     dnbinom(rnbinom(100,mu = 7.5,size = 5),mu = 7.5,size = 5,log = TRUE)),
+#'        hdf5 = file.path(tempdir(),'tmp.h5'))
+#' @export
 expStep <- function(pi, gamma, logf, hdf5) {
     invisible(.Call(`_epigraHMM_expStep`, pi, gamma, logf, hdf5))
 }
