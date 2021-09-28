@@ -88,23 +88,23 @@ callPatterns <- function(object,peaks,hdf5 = metadata(object)$output,
     postprob <- postprob[idx,]
     
     if(type == 'all'){
-        mcols(out) <- DataFrame(postprob)
+        S4Vectors::mcols(out) <- DataFrame(postprob)
     }
     if(type == 'fdr'){
         ppFdr <- DataFrame(fdrControl(prob = postprob[[pattern]],fdr = fdr))
         colnames(ppFdr) <- pattern
-        mcols(out) <- DataFrame(ppFdr)
+        S4Vectors::mcols(out) <- DataFrame(ppFdr)
     }
     if(type == 'max'){
         ppmax <- postprob[,list(Enrichment =colnames(postprob)[which.max(.SD)]),
                           by = seq_len(nrow(postprob))]
         
-        mcols(out) <- DataFrame(ppmax[,'Enrichment'])
+        S4Vectors::mcols(out) <- DataFrame(ppmax[,'Enrichment'])
     }
     if(type == 'ranges'){
         idxRanges <- overlapsAny(out,ranges)
         out <- out[idxRanges]
-        mcols(out) <- DataFrame(postprob[idxRanges,])
+        S4Vectors::mcols(out) <- DataFrame(postprob[idxRanges,])
     }
     
     return(out)
