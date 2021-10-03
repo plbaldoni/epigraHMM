@@ -68,6 +68,29 @@ innerMaxStepProb <- function(hdf5) {
     .Call(`_epigraHMM_innerMaxStepProb`, hdf5)
 }
 
+#' M-step (maximization w.r.t. initial and transition probabilities)
+#' @param hdf5 path to where the hdf5 is saved
+#'
+#' @examples
+#' #Creating dummy object
+#' countData <- rbind(matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1),
+#'                   matrix(rnbinom(2e3,mu = 7.5,size = 5),ncol = 1),
+#'                   matrix(rnbinom(1e3,mu = 2,size = 10),ncol = 1))
+#'
+#'
+#'
+#' colData <- data.frame(condition = 'A', replicate = 1)
+#' object <- epigraHMMDataSetFromMatrix(countData,colData)
+#'
+#' #Initializing
+#' object <- initializer(object,controlEM())
+#'
+#' #Running epigraHMM
+#' object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
+#'
+#' #Example
+#' maxStepProb(hdf5 = metadata(object)$output)
+#' @export
 maxStepProb <- function(hdf5) {
     .Call(`_epigraHMM_maxStepProb`, hdf5)
 }
@@ -80,6 +103,14 @@ reweight <- function(x, p) {
     .Call(`_epigraHMM_reweight`, x, p)
 }
 
+#' Simulates a Markov Chain of length 'n' given a matrix of transition probabilities P
+#' @param P a matrix of transition probabilities (row sums should be 1)
+#' @param n an integer specifying thhe length of the simulated sequence
+#'
+#' @examples
+#' #Example
+#' simulateMarkovChain(matrix(c(0.99,0.01,0.01,0.99),2,2),100)
+#' @export
 simulateMarkovChain <- function(P, n) {
     .Call(`_epigraHMM_simulateMarkovChain`, P, n)
 }
