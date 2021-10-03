@@ -9,8 +9,14 @@ using namespace H5;
 
 // Enable lambda expressions.... 
 // [[Rcpp::plugins(cpp11)]]
-
-// simulateMarkovChain simulates a Markov Chain of length 'm' given a matrix of transition probabilities P
+//' Simulates a Markov Chain of length 'n' given a matrix of transition probabilities P
+//' @param P a matrix of transition probabilities (row sums should be 1)
+//' @param n an integer specifying thhe length of the simulated sequence
+//'
+//' @examples
+//' #Example
+//' simulateMarkovChain(matrix(c(0.99,0.01,0.01,0.99),2,2),100)
+//' @export
 //[[Rcpp::export]]
 NumericVector simulateMarkovChain(NumericMatrix P,int n){
     NumericVector Z(n);

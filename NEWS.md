@@ -51,3 +51,11 @@ S4Vectors::mcols and utils::tail).
 
 * Exporting expStep function, which implements the E-step of EM algorithm
 (forward-backward & Viterbi algorithm) for a K-state HMM.
+
+# epigraHMM 1.0.6
+
+* Minor bug fix in controlEM documentation
+
+# epigraHMM 1.0.7
+
+* Exporting maxStepProb, which compute the MLE of initial and transition probabilities of a K-state HMM, as well as simulateMarkovChain, which simulates a Markov chain of length 'n' given a matrix of transition probabilities
