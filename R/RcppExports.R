@@ -89,7 +89,7 @@ innerMaxStepProb <- function(hdf5) {
 #' object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
 #'
 #' #Example
-#' maxStepProb(hdf5 = metadata(object)$output)
+#' maxStepProb(hdf5 = S4Vectors::metadata(object)$output)
 #' @export
 maxStepProb <- function(hdf5) {
     .Call(`_epigraHMM_maxStepProb`, hdf5)

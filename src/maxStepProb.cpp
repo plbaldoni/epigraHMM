@@ -31,7 +31,7 @@ using namespace H5;
 //' object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
 //'
 //' #Example
-//' maxStepProb(hdf5 = metadata(object)$output)
+//' maxStepProb(hdf5 = S4Vectors::metadata(object)$output)
 //' @export
 //[[Rcpp::export]]
 Rcpp::List maxStepProb(Rcpp::StringVector hdf5){
