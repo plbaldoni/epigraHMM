@@ -30,5 +30,5 @@ object <- initializer(object,controlEM())
 object <- epigraHMM(object,controlEM(),type = 'consensus',dist = 'nb')
 
 #Example
-maxStepProb(hdf5 = metadata(object)$output)
+maxStepProb(hdf5 = S4Vectors::metadata(object)$output)
 }

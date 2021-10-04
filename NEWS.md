@@ -59,3 +59,7 @@ S4Vectors::mcols and utils::tail).
 # epigraHMM 1.0.7
 
 * Exporting maxStepProb, which compute the MLE of initial and transition probabilities of a K-state HMM, as well as simulateMarkovChain, which simulates a Markov chain of length 'n' given a matrix of transition probabilities
+
+# epigraHMM 1.0.8
+
+* Minor bug fix in maxStepProb documentations
