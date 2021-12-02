@@ -40,5 +40,7 @@ test_that("check output from epigraHMM object (bam)",{
         
         expect_equal(assay(objectTwo)[1],assay(objectOne)[1])
         expect_equal(width(objectTwo),25000)
+    } else{
+        expect_true(TRUE)
     }
 })
