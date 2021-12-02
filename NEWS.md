@@ -63,3 +63,11 @@ S4Vectors::mcols and utils::tail).
 # epigraHMM 1.0.8
 
 * Minor bug fix in maxStepProb documentations
+
+# epigraHMM 1.2.0
+
+* Second release of epigraHMM on Bioconductor.
+
+# epigraHMM 1.2.1
+
+* Bug fix of output paths to handle paths with '.'
