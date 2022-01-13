@@ -164,22 +164,6 @@ sortObject = function(epigraHMMDataSet){
 }
 
 ################################################################################
-### Estimate transition probability from a sequence of integers
-################################################################################
-
-estimateTransitionProb = function(chain,numStates){
-    nm1 <- (numStates - 1)
-    if (max(chain) > nm1) {
-        chain <- round(nm1*(chain-max(chain))/(max(chain)-min(chain))+nm1)
-    }
-    MC <- matrix(chain, nrow = 1, ncol = length(chain))
-    MC <- table(c(MC[, -ncol(MC)]), c(MC[, -1]))
-    MC <- as.matrix(MC / rowSums(MC))
-    MC <- matrix(MC,ncol = ncol(MC),nrow = nrow(MC),byrow = FALSE)
-    return(checkProbabilities(MC))
-}
-
-################################################################################
 ### Invert parameters for glm.nb and glm.zinb
 ################################################################################
 
