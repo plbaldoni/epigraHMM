@@ -71,3 +71,8 @@ S4Vectors::mcols and utils::tail).
 # epigraHMM 1.2.1
 
 * Bug fix of output paths to handle paths with '.'
+
+# epigraHMM 1.3.2
+
+* Exporting function estimateTransitionProb to estimate transition probabilities
+from a sequence of states of a Markov chain
