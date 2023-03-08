@@ -17,29 +17,14 @@ checkConvergence <- function(controlHist,control){
 }
 
 ################################################################################
-### Function to rename file output if it already exists
+### Function to check if file output already exists
 ################################################################################
 
 checkPath <- function(path){
-    if(!(substr(path,nchar(path)-2,nchar(path)) == '.h5')){
-        stop('The file name must have a .h5 extension')
-    }
-    
-    if (!file.exists(path)) {
-        return(path)
-    }
-    
-    i <- 1
-    dirName <- dirname(path)
-    baseName <- basename(path)
-    repeat {
-        newBaseName <- paste0(substr(baseName,1,nchar(baseName)-3),i,'.h5')
-        newPath <- file.path(dirName,newBaseName)
-        if (!file.exists(newPath)) {
-            return(newPath)
-        }
-        i <- i + 1
-    }
+  if (file.exists(path)) {
+    message(paste('The output file',path,'already exists and epigraHMM will overwrite it.'))
+  }
+  return(path)
 }
 
 ################################################################################
