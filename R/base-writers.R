@@ -8,9 +8,11 @@
 ### Function to save output files
 ################################################################################
 
-saveOutputFiles <- function(gr.bed,object,control,hdf5) {
-    prob = subjectHits = method = gr.graph = peakindex = NULL
+#' @importFrom S4Vectors subjectHits
+saveOutputFiles <- function(gr.bed,object,control,hdf5,method) {
+    subjectHits = peakindex = NULL
     # Adding necessary columns for browser
+    prob <- exp(h5read(hdf5,'logProb1')[,2])
     gr.overlaps <- SummarizedExperiment::findOverlaps(gr.bed,rowRanges(object))
     dt.overlaps <- data.table::as.data.table(gr.overlaps)
     dt.overlaps <- dt.overlaps[,mean(prob[subjectHits]),by = 'queryHits']
