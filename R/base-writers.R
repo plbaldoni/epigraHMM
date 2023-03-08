@@ -43,22 +43,24 @@ saveOutputFiles <- function(gr.bed,object,control,hdf5,method) {
     rm(dt.bigwig)
     # Writing bedGraph files for mixture probabilities
     if (length(unique((colData(object)[['condition']]))) > 1) {
-        mixProbSet <- h5read(hdf5,'mixturePatterns')
-        fileName <- paste0(control[['fileName']],'_',
-                           paste0('mixProb_',mixProbSet,'.wig'))
-        wigPath <- file.path(dirPath,fileName)
-        filenames <- 
-            c(filenames,vapply(wigPath,checkPath,FUN.VALUE = 'character',
-                               USE.NAMES = FALSE))
-        names(filenames)[names(filenames) == ""] <- mixProbSet
-        for (i in seq_len(length(mixProbSet))) {
-            mixProb <- h5read(hdf5,'mixtureProb')[peakindex,i]
-            dt.bedgraph = data.frame(chrom = seqnames(gr.graph),
-                                     chromStart = start(gr.graph),
-                                     chromEnd = end(gr.graph),
-                                     mixProb = mixProb)
-            writeBedGraph(dt.bed,dt.bedgraph,control,mixProbSet[i],filenames)
-        }
+      subHits <- subjectHits(gr.overlaps)
+      gr.graph <- rowRanges(object)[subHits]
+      mixProbSet <- h5read(hdf5,'mixturePatterns')
+      fileName <- paste0(control[['fileName']],'_',
+                         paste0('mixProb_',mixProbSet,'.wig'))
+      wigPath <- file.path(dirPath,fileName)
+      filenames <- 
+        c(filenames,vapply(wigPath,checkPath,FUN.VALUE = 'character',
+                           USE.NAMES = FALSE))
+      names(filenames)[names(filenames) == ""] <- mixProbSet
+      for (i in seq_len(length(mixProbSet))) {
+        mixProb <- h5read(hdf5,'mixtureProb')[subHits,i]
+        dt.bedgraph = data.frame(chrom = seqnames(gr.graph),
+                                 chromStart = start(gr.graph),
+                                 chromEnd = end(gr.graph),
+                                 mixProb = mixProb)
+        writeBedGraph(dt.bed,dt.bedgraph,control,mixProbSet[i],filenames)
+      }
     }
     message('The following files have been saved:')
     for (i in seq_len(length(filenames))) {
@@ -120,7 +122,7 @@ writeWig <- function(object,chrset,dt.bigwig,control,filenames){
                                      seqinfo = sqInfo)
             system2("rm",filenames[paste0('prob_',i)])
         },error = function(x){
-            message("It was not possible to convert wig files to BigWig format because the input object has no specified genome")
+            message("It was not possible to convert wig files to BigWig format because the input object has no specified genome.")
         })
     }
 }
