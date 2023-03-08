@@ -71,7 +71,10 @@ callPeaks = function(object,hdf5 = metadata(object)$output,method = 'viterbi',
     gr.bed$name <- paste0(paste0('peak',seq_len(length(gr.bed))))
 
     # File names
-    if(saveToFile) saveOutputFiles(gr.bed,object,control,hdf5)
+    if(saveToFile){
+      if(is.null(control)) stop('A list of control arguments must be provided as input when saveToFile is TRUE (see callPeaks help page)')
+      saveOutputFiles(gr.bed,object,control,hdf5,method)
+    }
 
     return(gr.bed)
 }
