@@ -38,7 +38,7 @@ Imports:
     pheatmap,
     grDevices
 LinkingTo: Rcpp, RcppArmadillo, Rhdf5lib
-RoxygenNote: 7.1.2
+RoxygenNote: 7.2.3
 Encoding: UTF-8
 SystemRequirements: GNU make
 Suggests: 

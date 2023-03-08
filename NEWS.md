@@ -76,3 +76,8 @@ S4Vectors::mcols and utils::tail).
 
 * Exporting function estimateTransitionProb to estimate transition probabilities
 from a sequence of states of a Markov chain
+
+# epigraHMM 1.7.1/1.6.3
+
+* Fix callPeaks function to export .bed, .wig, and .bedGraph files
+* Output files are now overwritten, if existing
