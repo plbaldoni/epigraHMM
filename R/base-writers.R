@@ -74,18 +74,13 @@ saveOutputFiles <- function(gr.bed,object,control,hdf5,method) {
 
 writeBedGraph <- function(dt.bed,dt.bedgraph,control,mixProbSet,filenames){
     outPath <- control[['tempDir']]
-    utils::write.table(dt.bedgraph,
-                       file = file.path(outPath, "temp.bed"), row.names = FALSE,
-                       col.names = FALSE, quote = FALSE, sep = "\t")
-    header1 = paste0('track type=bedGraph name="epigraHMM(mixProb:',mixProbSet,')" description="','Probability','" visibility=full maxHeightPixels=128:32:11 graphType=bar autoScale=off alwaysZero=on viewLimits=0.0:1.0')
-    header2 = paste0('browser position ',dt.bed[1,'chrom'],':',
-                     dt.bed[1,'chromStart'],'-',dt.bed[1,'chromEnd'])
-    system2('echo',paste0(header2,' | cat - ',file.path(outPath,"temp.bed"),
-                          ' > ',file.path(outPath,"temp1.bed")))
-    system2('echo',paste0(header1,' | cat - ',file.path(outPath,"temp1.bed"),
-                          ' > ',as.character(filenames[mixProbSet])))
-    system2('rm',paste(file.path(outPath,"temp.bed"),
-                       file.path(outPath,"temp1.bed")))
+    
+    fname <- filenames[mixProbSet]
+    con <- file(as.character(fname),"a")
+    writeLines(paste0('track type=bedGraph name="epigraHMM(mixProb:',mixProbSet,')" description="','Probability','" visibility=full maxHeightPixels=128:32:11 graphType=bar autoScale=off alwaysZero=on viewLimits=0.0:1.0'),con)
+    writeLines(paste0('browser position ',dt.bed[1,'chrom'],':',dt.bed[1,'chromStart'],'-',dt.bed[1,'chromEnd']),con)
+    utils::write.table(dt.bedgraph,file = con, row.names = FALSE,col.names = FALSE, quote = FALSE, sep = "\t")
+    close(con)
 }
 
 ################################################################################
@@ -97,30 +92,18 @@ writeWig <- function(object,chrset,dt.bigwig,control,filenames){
     for (i in chrset) {
         dt.bigwig.subset <- dt.bigwig[dt.bigwig$chrom == i, ]
         
-        utils::write.table(dt.bigwig.subset[,c('chromStart','prob')],
-                           file = file.path(outPath, "temp.bed"),
-                           row.names = FALSE,col.names = FALSE, quote = FALSE, 
-                           sep = "\t")
-        header1 = paste0('track type=wiggle_0 name="epigraHMM(prob:',i,')" description="','Probability','" visibility=full maxHeightPixels=128:32:11 graphType=bar autoScale=off alwaysZero=on viewLimits=0.0:1.0')
-        header2 = paste0('browser position ',dt.bigwig.subset[1,'chrom'],':',
-                         dt.bigwig.subset[1,'chromStart'],'-',
-                         dt.bigwig.subset[10,'chromStart'])
-        header3 = paste0('variableStep chrom=',i)
-        system2('echo',paste0(header3,' | cat - ',file.path(outPath,"temp.bed"),
-                              ' > ',file.path(outPath,"temp1.bed")))
-        system2('echo',paste0(header1,' | cat - ',file.path(outPath,"temp1.bed"),
-                              ' > ',file.path(outPath,"temp2.bed")))
-        system2('echo',paste0(header2,' | cat - ',file.path(outPath,"temp2.bed"),
-                              ' > ',as.character(filenames[paste0('prob_',i)])))
-        system2('rm',paste(file.path(outPath,"temp.bed"),
-                           file.path(outPath,"temp1.bed"),
-                           file.path(outPath,"temp2.bed")))
+        fname <- filenames[paste0('prob_',i)]
+        con <- file(as.character(fname),"a")
+        writeLines(paste0('track type=wiggle_0 name="epigraHMM(prob:',i,')" description="','Probability','" visibility=full maxHeightPixels=128:32:11 graphType=bar autoScale=off alwaysZero=on viewLimits=0.0:1.0'),con)
+        writeLines(paste0('browser position ',dt.bigwig.subset[1,'chrom'],':',dt.bigwig.subset[1,'chromStart'],'-',dt.bigwig.subset[10,'chromStart']),con)
+        writeLines(paste0('variableStep chrom=',i),con)
+        utils::write.table(dt.bigwig.subset[,c('chromStart','prob')],file = con,row.names = FALSE,col.names = FALSE, quote = FALSE, sep = "\t")
+        close(con)
+        
         tryCatch({
-            sqInfo <- 
-                GenomeInfoDb::seqinfo(SummarizedExperiment::rowRanges(object))
-            rtracklayer::wigToBigWig(x = filenames[paste0('prob_',i)],
-                                     seqinfo = sqInfo)
-            system2("rm",filenames[paste0('prob_',i)])
+            sqInfo <- GenomeInfoDb::seqinfo(SummarizedExperiment::rowRanges(object))
+            rtracklayer::wigToBigWig(x = fname,seqinfo = sqInfo)
+            unlink(con)
         },error = function(x){
             message("It was not possible to convert wig files to BigWig format because the input object has no specified genome.")
         })
@@ -133,16 +116,11 @@ writeWig <- function(object,chrset,dt.bigwig,control,filenames){
 
 writeBed <- function(dt.bed,control,method,filenames){
     outPath <- control[['tempDir']]
-    utils::write.table(dt.bed, file = file.path(outPath, "temp.bed"),
-                       row.names = FALSE, col.names = FALSE, quote = FALSE,
-                       sep = "\t")
-    header1 <- paste0('track name="epigraHMM" description="',ifelse(method == 'viterbi','Viterbi Peaks',paste0('FDR-controlled Peaks (FDR = ',method,')')),'" visibility=1 useScore=1')
-    header2 <- paste0('browser position ',dt.bed[1,'chrom'],':',
-                      dt.bed[1,'chromStart'],'-',dt.bed[1,'chromEnd'])
-    system2('echo',paste0(header2,' | cat - ',file.path(outPath,"temp.bed"),
-                          ' > ',file.path(outPath,"temp1.bed")))
-    system2('echo',paste0(header1,' | cat - ',file.path(outPath,"temp1.bed"),
-                          ' > ',as.character(filenames['peaks'])))
-    system2('rm',paste(file.path(outPath,"temp.bed"),
-                       file.path(outPath,"temp1.bed")))
+    
+    fname <- filenames['peaks']
+    con <- file(as.character(fname),"a")
+    writeLines(paste0('track name="epigraHMM" description="',ifelse(method == 'viterbi','Viterbi Peaks',paste0('FDR-controlled Peaks (FDR = ',method,')')),'" visibility=1 useScore=1'),con)
+    writeLines(paste0('browser position ',dt.bed[1,'chrom'],':',dt.bed[1,'chromStart'],'-',dt.bed[1,'chromEnd']),con)
+    utils::write.table(dt.bed, file = con,row.names = FALSE, col.names = FALSE, quote = FALSE,sep = "\t")
+    close(con)
 }
