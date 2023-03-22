@@ -81,3 +81,7 @@ from a sequence of states of a Markov chain
 
 * Fix callPeaks function to export .bed, .wig, and .bedGraph files
 * Output files are now overwritten, if existing
+
+# epigraHMM 1.7.2/1.6.4
+
+* Fix callPeaks writers so that it works on Windows
