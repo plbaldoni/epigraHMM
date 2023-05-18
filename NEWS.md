@@ -85,3 +85,7 @@ from a sequence of states of a Markov chain
 # epigraHMM 1.7.2/1.6.4
 
 * Fix callPeaks writers so that it works on Windows
+
+# epigraHMM 1.9.1/1.8.2
+
+* Fix normalization of log-probabilities in cpp code to avoid underflow
