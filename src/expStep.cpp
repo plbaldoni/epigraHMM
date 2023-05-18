@@ -109,8 +109,8 @@ void expStep(arma::vec pi,
     }
     
     // Normalizing
-    logProb1 = log(normalise(exp(logProb1),1,1));
-    logProb2 = log(normalise(exp(logProb2),1,1));
+    logProb1 = logProb1.each_col() - log(sum(exp(logProb1),1));
+    logProb2 = logProb2.each_col() - log(sum(exp(logProb2),1));
     
     // Saving the log-likelihood function
     logf.save(hdf5_name(vstrings[0], "logLikelihood",hdf5_opts::replace));
