@@ -19,7 +19,7 @@
 #' @importFrom S4Vectors metadata
 #' @importFrom rhdf5 h5read
 #' @importFrom SummarizedExperiment rowRanges seqnames
-#' @importFrom GenomicRanges reduce start end
+#' @importFrom GenomicRanges reduce start end width
 #' @importFrom data.table as.data.table
 #' @importFrom rtracklayer wigToBigWig
 #' 
